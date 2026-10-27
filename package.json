@@ -6,7 +6,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron-vite dev",
+    "dev": "electron-vite dev --watch",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit"
@@ -16,6 +16,7 @@
     "electron": "^38.0.0",
     "electron-vite": "^5.0.0",
     "lucide-react": "^0.468.0",
+    "node-ical": "^0.27.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -1,0 +1,51 @@
+/* Resize only the compact strip; the expanded controls retain a readable width. */
+.focus-shell.has-calendar { grid-template-columns: var(--focus-sidebar-width, 288px) minmax(0, 1fr); }
+.focus-shell.has-calendar.calendar-left { grid-template-columns: minmax(0, 1fr) var(--focus-sidebar-width, 288px); }
+.focus-shell .dimension-grip { position: absolute; z-index: 8; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: var(--dw-accent); touch-action: none; -webkit-app-region: no-drag; }
+.focus-shell .dimension-grip:hover, .focus-shell .dimension-grip:active { background: var(--dw-tint); }
+.focus-shell .dimension-grip:focus-visible { outline-offset: -3px; }
+.focus-shell .dimension-grip > span { display: block; background: var(--dw-accent); opacity: 0; transition: opacity 120ms ease; pointer-events: none; }
+.focus-shell .dimension-grip:hover > span, .focus-shell .dimension-grip:active > span, .focus-shell .dimension-grip:focus-visible > span { opacity: .65; }
+.focus-shell .grip-left, .focus-shell .grip-right { top: 8px; bottom: 8px; width: 9px; height: auto; cursor: ew-resize; }
+.focus-shell .grip-left { left: 0; }
+.focus-shell .grip-right { right: 0; }
+.focus-shell :is(.grip-left,.grip-right) > span { width: 2px; height: 16px; border-radius: 2px; }
+.focus-shell .grip-top, .focus-shell .grip-bottom { left: 12px; right: 12px; width: auto; height: 9px; cursor: ns-resize; }
+.focus-shell .grip-top { top: 0; }
+.focus-shell .grip-bottom { bottom: 0; }
+.focus-shell :is(.grip-top,.grip-bottom) > span { width: 24px; height: 2px; border-radius: 2px; }
+.focus-shell :is(.grip-top-left,.grip-top-right,.grip-bottom-left,.grip-bottom-right) { width: 19px; height: 19px; }
+.focus-shell :is(.grip-top-left,.grip-bottom-left) { left: 0; }
+.focus-shell :is(.grip-top-right,.grip-bottom-right) { right: 0; }
+.focus-shell :is(.grip-top-left,.grip-top-right) { top: 0; }
+.focus-shell :is(.grip-bottom-left,.grip-bottom-right) { bottom: 0; }
+.focus-shell :is(.grip-top-left,.grip-bottom-right) { cursor: nwse-resize; }
+.focus-shell :is(.grip-top-right,.grip-bottom-left) { cursor: nesw-resize; }
+.focus-shell :is(.grip-top-left,.grip-top-right,.grip-bottom-left,.grip-bottom-right) > span { width: 7px; height: 7px; opacity: .3; background: transparent; border-bottom: 1px solid; border-right: 1px solid; }
+.focus-shell .grip-top-left > span { transform: rotate(180deg); }
+.focus-shell .grip-top-right > span { transform: rotate(-90deg); }
+.focus-shell .grip-bottom-left > span { transform: rotate(90deg); }
+.focus-shell .focus-calendar-panel { container-type: inline-size; }
+.focus-shell .drawer-calendar-source > span { flex: 1; min-width: 0; }
+.focus-shell .drawer-calendar-source select { color-scheme: inherit; }
+.focus-shell .focus-calendar-panel.is-short .drawer-calendar-header { padding-top: 12px; padding-bottom: 9px; }
+.focus-shell .focus-calendar-panel.is-short .drawer-eyebrow { display: none; }
+.focus-shell .focus-calendar-panel.is-short .drawer-calendar-summary { padding-bottom: 8px; }
+.focus-shell .focus-calendar-panel.is-short .imported-task-list { max-height: 44px; }
+.focus-shell .focus-calendar-panel.is-short .imported-tasks { padding-top: 7px; padding-bottom: 7px; }
+.focus-shell .focus-calendar-panel.is-short .week-calendar { min-height: 100px; }
+@container (max-width: 530px) {
+  .focus-shell .drawer-calendar-header { flex-direction: column; align-items: stretch; gap: 8px; padding: 14px 14px 10px; }
+  .focus-shell .drawer-calendar-header nav { justify-content: space-between; }
+  .focus-shell .drawer-calendar-header h2 { font-size: 22px; }
+  .focus-shell .drawer-calendar-source { padding-left: 14px; padding-right: 14px; gap: 8px; }
+  .focus-shell .drawer-calendar-source > span { max-width: none; }
+  .focus-shell .drawer-calendar-source label { gap: 4px; }
+  .focus-shell .drawer-calendar-summary { padding-left: 14px; padding-right: 14px; }
+  .focus-shell .drawer-calendar-footer { padding: 9px 14px 12px; }
+  .focus-shell .drawer-calendar-footer > span:last-child, .focus-shell .imported-tasks summary small { display: none; }
+  .focus-shell .imported-tasks { padding-left: 14px; padding-right: 14px; }
+  .focus-shell .imported-task-list article { gap: 6px; }
+  .focus-shell .imported-task-list article > div span, .focus-shell .imported-task-list article p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) { .focus-shell .dimension-grip > span { transition: none; } }

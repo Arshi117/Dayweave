@@ -1,0 +1,17 @@
+.focus-shell .calendar-task-split { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.focus-shell .calendar-task-split .calendar-task-pane { flex: 0 0 auto; min-height: 0; overflow: hidden; }
+.focus-shell .calendar-task-split .imported-tasks { height: 100%; min-height: 0; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 8px; border-bottom: 0; }
+.focus-shell .calendar-task-split .imported-tasks summary { flex: 0 0 auto; }
+.focus-shell .calendar-task-split .imported-tasks::details-content { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.focus-shell .calendar-task-split .imported-tasks-toolbar { flex: 0 0 auto; }
+.focus-shell .focus-calendar-panel .calendar-task-split .calendar-task-pane .imported-task-list { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
+.focus-shell .calendar-schedule-pane { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.focus-shell .focus-calendar-panel .calendar-schedule-pane > .week-calendar { flex: 1; min-height: 0; }
+.focus-shell .calendar-task-split.tasks-collapsed .calendar-task-pane { height: auto; }
+.focus-shell .calendar-task-split.tasks-collapsed .imported-tasks { height: auto; border-bottom: 1px solid var(--dw-line); }
+.focus-shell .calendar-task-separator { position: relative; display: grid; place-items: center; flex: 0 0 10px; height: 10px; cursor: ns-resize; touch-action: none; user-select: none; -webkit-app-region: no-drag; background: var(--dw-surface); }
+.focus-shell .calendar-task-separator::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--dw-line); }
+.focus-shell .calendar-task-separator > span { position: relative; width: 32px; height: 3px; border-radius: 4px; background: var(--dw-muted); opacity: .45; pointer-events: none; }
+.focus-shell .calendar-task-separator:hover, .focus-shell .calendar-task-separator:focus-visible, .focus-shell .calendar-task-split.is-resizing .calendar-task-separator { background: var(--dw-tint); outline: none; }
+.focus-shell .calendar-task-separator:hover > span, .focus-shell .calendar-task-separator:focus-visible > span, .focus-shell .calendar-task-split.is-resizing .calendar-task-separator > span { background: var(--dw-accent); opacity: 1; }
+.focus-shell .calendar-task-split.is-resizing, .focus-shell .calendar-task-split.is-resizing * { cursor: ns-resize !important; user-select: none; }

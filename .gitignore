@@ -119,3 +119,17 @@
 /node_modules/undici-types/LICENSE
 /node_modules/undici-types/README.md
 /node_modules/vite/
+
+# Build output and local authorization configuration
+node_modules/
+out/
+dist/
+.env
+.env.*
+!.env.example
+credentials*.json
+client_secret*.json
+google-client*.json
+google-authorization*.json
+token*.json
+*.log

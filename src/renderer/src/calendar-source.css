@@ -1,0 +1,12 @@
+.focus-shell .all-day-calendar-row { display: grid; grid-template-columns: 49px repeat(7,minmax(0,1fr)); flex-shrink: 0; padding-right: 8px; border-bottom: 1px solid var(--dw-line); background: var(--dw-tint); }
+.focus-shell .all-day-calendar-row > span { padding: 8px; color: var(--dw-muted); font-size: 9px; }
+.focus-shell .all-day-calendar-row > div { min-width: 0; max-height: 90px; overflow-y: auto; padding: 4px 3px; border-left: 1px solid var(--dw-line); scrollbar-width: thin; }
+.focus-shell .all-day-calendar-row button { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100%; padding: 4px; margin: 0 0 3px; overflow: hidden; overflow-wrap: anywhere; border: 1px solid var(--dw-line); border-radius: 5px; background: var(--dw-hover); color: var(--dw-text); font-size: 10px; text-align: left; }
+.focus-shell .calendar-source-fields { padding: 10px 0; margin-top: 10px; border-top: 1px solid var(--dw-line); color: var(--dw-muted); font-size: 10px; }
+.focus-shell .calendar-source-fields summary { cursor: pointer; color: var(--dw-accent); }
+.focus-shell .calendar-source-fields dl { margin-bottom: 0; }
+.focus-shell .calendar-source-fields dt { color: var(--dw-text); margin-top: 10px; }
+.focus-shell .calendar-source-fields dd { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
+.focus-shell .calendar-source-view { padding-top: 10px; }
+.focus-shell .calendar-source-view pre { max-height: 250px; overflow: auto; padding: 10px; border: 1px solid var(--dw-line); border-radius: 8px; background: var(--dw-field); color: var(--dw-text); font-size: 10px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.focus-shell .drawer-source-notice { max-height: 85px; overflow-y: auto; border-color: var(--dw-line); background: var(--dw-tint); color: var(--dw-warning); }

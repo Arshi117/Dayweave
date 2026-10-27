@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import { COLORS, toMinutes } from '../calendar'
 import type { TimedEntry } from '../types'
 interface Props {
   entry: TimedEntry; existing: boolean
   onSave: (entry: TimedEntry) => void
   onClose: () => void; onDelete: () => void
+  onCreateParallel?: () => void
 }
-export function EventDialog({ entry, existing, onSave, onClose, onDelete }: Props) {
+export function EventDialog({ entry, existing, onSave, onClose, onDelete, onCreateParallel }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [draft, setDraft] = useState(entry)
   const [error, setError] = useState('')
@@ -38,6 +39,7 @@ export function EventDialog({ entry, existing, onSave, onClose, onDelete }: Prop
       </div>
       <fieldset className="color-picker"><legend>日程颜色</legend>{COLORS.map(color => <button type="button" key={color.id} aria-label={color.name} aria-pressed={(draft.color ?? 'blue') === color.id} className={(draft.color ?? 'blue') === color.id ? 'chosen' : ''} style={{ background: 'rgb(' + color.rgb + ')' }} onClick={() => setDraft({ ...draft, color: color.id })} />)}</fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
+      {existing && onCreateParallel && <button className="create-parallel-button" type="button" onClick={onCreateParallel}><Plus size={14} />在原时段新建另一条日程</button>}
       <div className="dialog-actions">{existing && <button type="button" className="delete-button" onClick={onDelete}><Trash2 size={15} />删除</button>}<button type="button" onClick={onClose}>取消</button><button className="save-button" type="submit">保存日程</button></div>
     </form>
   </dialog>

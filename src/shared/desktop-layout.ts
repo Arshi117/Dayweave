@@ -1,6 +1,6 @@
-// Shared DIP coordinates keep the native desktop button and editor button aligned.
-export function cornerControlBounds(viewportWidth: number) {
-  const width = 112, height = 36
-  const right = viewportWidth <= 1100 ? 28 : 40
-  return { x: Math.max(0, viewportWidth - right - width), y: 26, width, height }
+import type { CalendarFrame } from './calendar-frame'
+
+// Shared DIP coordinates place both mode icons inside the calendar's toolbar.
+export function cornerControlBounds(frame: CalendarFrame) {
+  return { x: Math.round(frame.x + frame.width - 64), y: Math.round(frame.y + 26), width: 32, height: 32 }
 }

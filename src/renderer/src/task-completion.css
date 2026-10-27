@@ -1,0 +1,14 @@
+.focus-shell .task-completion-checkbox { flex-shrink: 0; width: 18px; height: 18px; padding: 0; margin: 0; accent-color: var(--dw-accent); cursor: pointer; }
+.focus-shell .imported-task-list article { align-items: flex-start; }
+.focus-shell .imported-task-list .task-completion-checkbox { margin-top: 2px; }
+.focus-shell .imported-task-list article > button { align-self: center; }
+.focus-shell .imported-task-list .is-completed strong { color: var(--dw-muted); text-decoration: line-through; }
+.focus-shell .imported-tasks-toolbar { align-items: center; justify-content: space-between; gap: 8px; margin: 7px 0 3px; }
+.focus-shell .task-completion-view { padding: 4px 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--dw-accent); font-size: 10px; }
+.focus-shell .task-completion-view:hover, .focus-shell .task-completion-view[aria-pressed='true'] { background: var(--dw-hover); border-color: var(--dw-line); }
+.focus-shell .focus-task-row { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.focus-shell .focus-task-row > button { display: flex; flex: 1; min-width: 0; padding: 9px 7px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--dw-text); text-align: left; }
+.focus-shell .focus-task-row > button:hover { background: var(--dw-hover); }
+.focus-shell .focus-task-row > button[aria-pressed='true'] { border-color: var(--dw-line); background: var(--dw-hover); }
+.focus-shell .focus-selected-task-complete { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 38px; padding: 7px 3px; color: var(--dw-muted); font-size: 9px; cursor: pointer; }
+.focus-shell .focus-selected-task-complete .task-completion-checkbox { width: 22px; height: 22px; }

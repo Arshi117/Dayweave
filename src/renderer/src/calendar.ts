@@ -37,7 +37,7 @@ export function isTimedEntry(entry: PlannerEntry): entry is TimedEntry {
   return start >= 0 && start < end && end <= DAY_MINUTES
 }
 export function colorRgb(color?: EventColor): string { return (COLORS.find(item => item.id === color) ?? COLORS[0]).rgb }
-export interface PositionedEntry { entry: TimedEntry; lane: number; laneCount: number }
+export interface PositionedEntry { entry: TimedEntry; lane: number; laneCount: number; laneSpan: number }
 // Adjacent events share a lane. Each connected overlap group gets its own lanes.
 export function layoutDay(entries: TimedEntry[]): PositionedEntry[] {
   const sorted = [...entries].sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime)
@@ -45,7 +45,16 @@ export function layoutDay(entries: TimedEntry[]): PositionedEntry[] {
   const output: PositionedEntry[] = []
   let group: PositionedEntry[] = [], ends: number[] = [], groupEnd = -1
   const flush = () => {
-    for (const item of group) output.push({ ...item, laneCount: ends.length })
+    for (const item of group) {
+      const start = toMinutes(item.entry.startTime), end = toMinutes(item.entry.endTime)
+      let laneSpan = 1
+      // Expand into unused lanes without covering any event in the same interval.
+      for (let lane = item.lane + 1; lane < ends.length; lane++) {
+        if (group.some(other => other.lane === lane && toMinutes(other.entry.startTime) < end && toMinutes(other.entry.endTime) > start)) break
+        laneSpan++
+      }
+      output.push({ ...item, laneCount: ends.length, laneSpan })
+    }
     group = []; ends = []
   }
   for (const entry of sorted) {
@@ -54,7 +63,7 @@ export function layoutDay(entries: TimedEntry[]): PositionedEntry[] {
     let lane = ends.findIndex(lastEnd => lastEnd <= start)
     if (lane < 0) lane = ends.length
     ends[lane] = end
-    group.push({ entry, lane, laneCount: 1 })
+    group.push({ entry, lane, laneCount: 1, laneSpan: 1 })
     groupEnd = group.length === 1 ? end : Math.max(groupEnd, end)
   }
   flush()
