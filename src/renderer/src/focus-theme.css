@@ -73,9 +73,9 @@
 .focus-next > strong { color: var(--dw-text); font-size: 10px; }
 .focus-next.is-empty > strong { color: var(--dw-muted); font-size: 9px; }
 .focus-conflict { color: var(--dw-warning); background: var(--dw-tint); padding: 7px; border-radius: 7px; font-size: 9px; }
-.focus-actions, .focus-empty-actions { padding: 12px 14px 14px; gap: 6px; border-top: 1px solid var(--dw-line); }
-.focus-actions button, .focus-empty-actions button { min-height: 32px; border: 1px solid transparent; border-radius: 8px; background: var(--dw-tint); color: var(--dw-muted); font-size: 10px; gap: 4px; }
-.focus-actions button:hover, .focus-empty-actions button:hover { color: var(--dw-text); background: var(--dw-hover); }
+.focus-actions { padding: 12px 14px 14px; gap: 6px; border-top: 1px solid var(--dw-line); }
+.focus-actions button { min-height: 32px; border: 1px solid transparent; border-radius: 8px; background: var(--dw-tint); color: var(--dw-muted); font-size: 10px; gap: 4px; }
+.focus-actions button:hover { color: var(--dw-text); background: var(--dw-hover); }
 .focus-actions button:first-child { color: var(--dw-on-accent); background: var(--dw-accent); font-weight: 550; }
 .focus-actions button:first-child:hover { color: var(--dw-on-accent); background: var(--dw-accent); filter: brightness(1.07); }
 .focus-task-picker { margin-top: 0; border-top: 1px solid var(--dw-line); padding-top: 12px; }
@@ -86,7 +86,7 @@
 .focus-task-choice { color: var(--dw-accent); }
 .focus-task-choice i { background: var(--dw-muted); }
 .focus-task-item strong { color: var(--dw-text); font-size: 11px; }
-.focus-task-item small, .focus-refresh-note { color: var(--dw-muted); }
+.focus-task-item small { color: var(--dw-muted); }
 
 /* The three directions retain their own composition, not only a different palette. */
 .focus-shell[data-appearance='paper'] .focus-actions button:first-child { background: var(--dw-text); color: var(--dw-surface); }
@@ -193,3 +193,4 @@
   .focus-shell button, .focus-shell input, .focus-shell select, .focus-pill-progress > span, .focus-pull-handle > span { transition: none; }
   .focus-shell.is-expanded .focus-details { animation: none; }
 }
+

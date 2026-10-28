@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
-import { ArrowLeft, ArrowUpRight, CalendarDays, Check, Clock3, ListTodo, Palette, Plus, RefreshCw, Settings2, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowUpRight, CalendarDays, Check, Clock3, ListTodo, Palette, Plus, RefreshCw, Settings2, X } from 'lucide-react'
 import { extendFocus, focusView, localFocusEvents, type CalendarRange, type FocusSession, type SubscriptionSnapshot } from '../../shared/focus'
 import { DEFAULT_FOCUS_DIMENSIONS, FOCUS_WIDTH, type FocusPlacement } from '../../shared/focus-window-layout'
 import type { PlannerEntry } from './types'
@@ -14,11 +14,14 @@ import { AppearancePicker } from './components/AppearancePicker'
 import { ResizeGrip } from './components/ResizeGrip'
 import { APPEARANCE_KEY, readAppearance, type Appearance } from './appearance'
 import { TASK_COMPLETION_KEY, readTaskCompletion } from './task-completion'
+import { SyncStatus, syncSummary, type SyncSource } from './components/SyncStatus'
+import { FirstUseHint, useFirstUseHints } from './components/FirstUseHint'
 import './focus.css'
 import './focus-theme.css'
 import './focus-resize.css'
 import './task-completion.css'
 import './calendar-source.css'
+import './usability.css'
 
 const ENTRY_KEY = 'dayweave.entries.v1'
 const SESSION_KEY = 'dayweave.focus.session.v1'
@@ -56,8 +59,9 @@ export function FocusBar() {
   const [microsoft, setMicrosoft] = useState<MicrosoftTodoState>(EMPTY_MICROSOFT)
   const [links, setLinks] = useState<CalendarLinksState>({ sources: [], error: '' })
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(() => { const saved = read<unknown>(TASK_KEY, null); return typeof saved === 'string' ? saved : null })
-  const [refreshing, setRefreshing] = useState(false)
-  const [refreshNote, setRefreshNote] = useState('')
+  const [syncOpen, setSyncOpen] = useState(false)
+  const [connectionTarget, setConnectionTarget] = useState('home')
+  const hints = useFirstUseHints()
   const activeFeed = useMemo(() => combinedImports(google, feed, ticktick, microsoft, links.sources), [google, feed, ticktick, microsoft, links.sources])
   const [feedLoaded, setFeedLoaded] = useState(false)
   const [settings, setSettings] = useState(false)
@@ -70,8 +74,20 @@ export function FocusBar() {
   const shell = useRef<HTMLElement>(null)
   const pull = useRef<{ id: number; y: number; moved: boolean; direction: number } | null>(null)
   const showDetails = expanded
-  function collapse() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false) }
+  function collapse() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false) }
   function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false) }
+  function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setAppearanceOpen(false); setSyncOpen(false) }
+  useEffect(() => { if (expanded) hints.dismiss('pull') }, [expanded])
+  useEffect(() => {
+    if (expanded || hints.seen.move) return
+    let x = window.screenX, y = window.screenY
+    const settledAfter = Date.now() + 750
+    const timer = window.setInterval(() => {
+      if (Date.now() < settledAfter) { x = window.screenX; y = window.screenY; return }
+      if (Math.hypot(window.screenX - x, window.screenY - y) > 8) hints.dismiss('move')
+    }, 250)
+    return () => window.clearInterval(timer)
+  }, [expanded, hints.seen.move])
   function pullStart(event: PointerEvent<HTMLButtonElement>) {
     if (event.button !== 0) return
     event.preventDefault(); event.stopPropagation()
@@ -96,7 +112,7 @@ export function FocusBar() {
   useEffect(() => {
     const offPlacement = window.focusControls?.onPlacement(setPlacement)
     const offCalendar = window.focusControls?.onOpenCalendar(openCalendar)
-    const offSettings = window.focusControls?.onOpenSettings(() => { setExpanded(true); setSettings(true); setAppearanceOpen(false) })
+    const offSettings = window.focusControls?.onOpenSettings(() => openConnections())
     return () => { offPlacement?.(); offCalendar?.(); offSettings?.() }
   }, [])
   useLayoutEffect(() => {
@@ -185,6 +201,7 @@ export function FocusBar() {
   function toggleSettings() {
     setExpanded(true)
     setAppearanceOpen(false)
+    setSyncOpen(false); setConnectionTarget('home')
     setSettings(current => !current)
   }
   function changeAppearance(next: Appearance) {
@@ -195,27 +212,29 @@ export function FocusBar() {
     setEntries(next)
     return true
   }
-  async function refreshSources() {
+  async function retrySource(id: string) {
     const api = window.focusControls
-    if (!api || refreshing || activeFeed.refreshing) return
-    setRefreshing(true); setRefreshNote(''); setError('')
-    const requests: Promise<string>[] = []
-    if (google.connected) requests.push(api.refreshGoogle().then(value => { setGoogle(value); return value.error }))
-    if (feed.configured && (!google.connected || !/(^|\.)google\.com$/i.test(feed.sourceLabel))) requests.push(api.refreshSubscription().then(value => { setFeed(value); return value.error }))
-    if (ticktick.configured) requests.push(api.refreshTickTick().then(value => { setTickTick(value); return value.error }))
-    if (microsoft.connected) requests.push(api.refreshMicrosoft().then(value => { setMicrosoft(value); return value.error }))
-    for (const source of links.sources) requests.push(api.refreshCalendarLink(source.id).then(value => { setLinks(value); return value.sources.find(item => item.id === source.id)?.snapshot.error || value.error }))
-    try {
-      const results = await Promise.allSettled(requests)
-      const failed = results.some(result => result.status === 'rejected' || Boolean(result.value))
-      setRefreshNote(failed ? '部分来源未更新，请在连接设置中查看。' : requests.length ? '已读取最新订阅内容。' : '请先连接日程来源。')
-    } finally { setRefreshing(false) }
+    if (!api) throw new Error('Unavailable app connection')
+    if (id === 'google') setGoogle(await api.refreshGoogle())
+    else if (id === 'microsoft') setMicrosoft(await api.refreshMicrosoft())
+    else if (id === 'legacy') setFeed(await api.refreshSubscription())
+    else if (id === 'ticktick') setTickTick(await api.refreshTickTick())
+    else setLinks(await api.refreshCalendarLink(id))
   }
+  const syncSources: SyncSource[] = []
+  const addSyncSource = (id: string, name: string, state: Pick<SyncSource, 'lastSynced' | 'refreshing' | 'error' | 'reconnectRequired'>) => syncSources.push({ id, name, ...state, retry: () => retrySource(id) })
+  if (google.connected || google.reconnectRequired || google.error) addSyncSource('google', 'Google 日历', google)
+  if (feed.configured && !(google.connected && /(^|\.)google\.com$/i.test(feed.sourceLabel))) addSyncSource('legacy', feed.calendarName || '日历订阅', feed)
+  if (ticktick.configured) addSyncSource('ticktick', ticktick.calendarName || 'TickTick', ticktick)
+  if (microsoft.connected || microsoft.reconnectRequired || microsoft.error) addSyncSource('microsoft', 'Microsoft To Do', microsoft)
+  for (const source of links.sources) addSyncSource(source.id, source.snapshot.calendarName || (source.provider === 'ticktick' ? 'TickTick' : source.snapshot.sourceLabel), source.snapshot)
+  const syncProblem = syncSources.some(source => source.error || source.reconnectRequired)
+  const syncBusy = syncSources.some(source => source.refreshing)
   const today = dateKey(new Date(now))
   const tasks = useMemo(() => (activeFeed.tasks || []).filter(task => !taskCompletion[task.id]).sort((a, b) => String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'))
     || (a.dueAt || 0) - (b.dueAt || 0) || a.title.localeCompare(b.title)), [activeFeed.tasks, taskCompletion])
   const selectedTask = view.current ? null : tasks.find(task => task.id === selectedTaskId)
-    || tasks.find(task => task.dueDate && task.dueDate <= today) || (!view.next ? tasks[0] : null)
+    || tasks.find(task => task.dueDate === today) || (!view.next ? tasks.find(task => !task.dueDate) || tasks.find(task => task.dueDate && task.dueDate > today) || tasks[0] : null)
   function selectTask(id: string) { if (persist(TASK_KEY, id)) setSelectedTaskId(id) }
   const nextDate = view.next && new Date(view.next.start).toDateString() !== new Date(now).toDateString()
     ? new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(view.next.start) + ' ' : ''
@@ -250,19 +269,22 @@ export function FocusBar() {
         onPointerDown={pullStart} onPointerMove={pullMove} onPointerUp={pullEnd} onPointerCancel={() => { pull.current = null }} onLostPointerCapture={() => { pull.current = null }}
         onClick={event => { if (event.detail === 0) { if (expanded) collapse(); else setExpanded(true) } }}><span /></button>
     </div>
+    {!hints.seen.move ? <FirstUseHint kind="move" onDismiss={() => hints.dismiss('move')} /> : !expanded && !hints.seen.pull ? <FirstUseHint kind="pull" onDismiss={() => hints.dismiss('pull')} /> : null}
     {showDetails && <section className="focus-details" aria-label={appearanceOpen ? '外观设置' : settings ? '连接与导入' : '当前安排详情'}>
       <header className="focus-details-header">
         {(settings || appearanceOpen) && <button title="返回当前安排" aria-label="返回当前安排" onClick={() => { setSettings(false); setAppearanceOpen(false) }}><ArrowLeft size={14} /></button>}
         <span className="focus-panel-label">{appearanceOpen ? '外观' : settings ? '连接与导入' : 'Dayweave'}</span>
         <div className="focus-header-actions">
+          <button className={syncProblem ? 'sync-status-trigger has-error' : 'sync-status-trigger'} aria-label="同步状态" aria-expanded={syncOpen} title={syncSummary(syncSources, now)} onClick={() => setSyncOpen(value => !value)}>{syncProblem ? <AlertCircle size={14} /> : <RefreshCw size={14} className={syncBusy ? 'is-spinning' : undefined} />}</button>
           <button title={calendar ? '收起日历' : '展开日历'} aria-label="展开日历" aria-pressed={calendar} onClick={() => { if (calendar) setCalendar(false); else openCalendar() }}><CalendarDays size={14} /></button>
           <button title="切换外观" aria-label="切换外观" aria-pressed={appearanceOpen} onClick={() => { setSettings(false); setAppearanceOpen(current => !current) }}><Palette size={14} /></button>
           {!settings && <button title="连接与导入" aria-label="连接与导入" onClick={toggleSettings}><Settings2 size={14} /></button>}
           <button title="收起面板" aria-label="收起面板" onClick={collapse}><X size={14} /></button>
         </div>
       </header>
+      {syncOpen && <SyncStatus sources={syncSources} now={now} onManage={openConnections} />}
       {appearanceOpen ? <AppearancePicker value={appearance} onChange={changeAppearance} /> : settings ? <div className="focus-settings">
-        <ImportConnections google={google} feed={feed} ticktick={ticktick} microsoft={microsoft} links={links}
+        <ImportConnections key={connectionTarget} initialView={connectionTarget} google={google} feed={feed} ticktick={ticktick} microsoft={microsoft} links={links}
           onGoogle={setGoogle} onFeed={setFeed} onTickTick={setTickTick} onMicrosoft={setMicrosoft} onLinks={setLinks} />
       </div> : <>
         <div className="focus-main">
@@ -280,16 +302,15 @@ export function FocusBar() {
           {!view.current && <FocusTasks tasks={tasks} selectedId={selectedTask?.id} today={today} onSelect={selectTask} onComplete={id => toggleTaskCompletion(id, true)} />}
           {upcomingConflicts.length > 0 && <div className="focus-conflict" role="status" title={focusNote}>{focusNote}</div>}
         </div>
-        {view.current ? <footer className="focus-actions">
+        {view.current && <footer className="focus-actions">
           <button onClick={complete} title="只在 Dayweave 标记完成"><Check size={13} />完成</button>
           <button title="继续 15 分钟" onClick={() => view.current && changeSession(extendFocus(view.current, view.end, Date.now()))}><Plus size={13} />延长 15 分钟</button>
-        </footer> : <footer className="focus-empty-actions">{activeFeed.configured ? <button disabled={refreshing || activeFeed.refreshing} onClick={() => { void refreshSources() }}><RefreshCw size={11} />{refreshing || activeFeed.refreshing ? '更新中' : '刷新安排'}</button> : <button onClick={toggleSettings}>连接日历</button>}<button onClick={openCalendar}>查看日历</button></footer>}
-        {refreshNote && <p className="focus-refresh-note" role="status">{refreshNote}</p>}
+        </footer>}
       </>}
-      {problem && <div className="focus-error" role="alert">{problem}</div>}
+      {error && <div className="focus-error" role="alert">{error}</div>}
     </section>}
     </div>
-    {calendar && <CalendarPanel entries={entries} subscription={activeFeed} taskCompletion={taskCompletion} onTaskCompletion={toggleTaskCompletion} now={now} height={Math.max(240, Math.min(dimensions.calendarHeight, placement.availableHeight - 12))} left={placement.left} above={placement.above} onSave={saveEntries} onRangeChange={requestCalendarRange} onClose={() => setCalendar(false)} />}
+    {calendar && <CalendarPanel entries={entries} subscription={activeFeed} taskCompletion={taskCompletion} onTaskCompletion={toggleTaskCompletion} now={now} height={Math.max(240, Math.min(dimensions.calendarHeight, placement.availableHeight - 12))} left={placement.left} above={placement.above} onSave={saveEntries} onRangeChange={requestCalendarRange} onClose={() => setCalendar(false)} showSplitHint={!hints.seen.split} onDismissSplitHint={() => hints.dismiss('split')} />}
   </main>
 }
 

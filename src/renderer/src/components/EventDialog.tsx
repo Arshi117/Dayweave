@@ -3,12 +3,13 @@ import { Plus, Trash2, X } from 'lucide-react'
 import { COLORS, toMinutes } from '../calendar'
 import type { TimedEntry } from '../types'
 interface Props {
+  notice?: string
   entry: TimedEntry; existing: boolean
   onSave: (entry: TimedEntry) => void
   onClose: () => void; onDelete: () => void
   onCreateParallel?: () => void
 }
-export function EventDialog({ entry, existing, onSave, onClose, onDelete, onCreateParallel }: Props) {
+export function EventDialog({ entry, existing, notice, onSave, onClose, onDelete, onCreateParallel }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [draft, setDraft] = useState(entry)
   const [error, setError] = useState('')
@@ -29,6 +30,7 @@ export function EventDialog({ entry, existing, onSave, onClose, onDelete, onCrea
   return <dialog ref={dialog} className="event-dialog" onCancel={e => { e.preventDefault(); onClose() }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
     <form onSubmit={submit}>
       <div className="dialog-heading"><h2>{existing ? '编辑日程' : '新建日程'}</h2><button type="button" className="icon-button" onClick={onClose} aria-label="关闭编辑"><X size={19} /></button></div>
+      {notice && <p className="task-schedule-notice">{notice}</p>}
       <label>日程名称<input autoFocus required maxLength={120} placeholder="例如：上课、学习、参加讲座" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label>
       <label>日期<input required type="date" value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value })} /></label>
       <div className="time-fields">

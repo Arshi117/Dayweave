@@ -4,7 +4,9 @@ Dayweave is a compact Windows task strip with a calendar drawer. The application
 
 ## Launch
 
-Double-click `Open Dayweave.cmd` in the Dayweave folder. The app runs in Electron; a browser preview cannot create the floating window.
+For an installed release, launch Dayweave from the desktop or Start menu shortcut. End users do not need Node.js, npm, or the source folder. The Windows x64 installer is generated as `release/Dayweave-Setup-0.1.0-x64.exe`. See `RELEASING.md` for building and distributing it.
+
+For the existing development checkout, double-click `Open Dayweave.cmd`. The app runs in Electron; a browser preview cannot create the floating window.
 
 After updating the build, quit the old instance from the tray menu and launch again. Starting another copy only reveals the already-running instance. Development mode watches main and preload sources as well as the renderer, restarting Electron when the native side changes so stale IPC bridges are not mixed with updated renderer code.
 
@@ -47,9 +49,19 @@ Local schedules continue to use the existing `dayweave.entries.v1` storage key a
 
 Already-started overlapping events appear under Concurrent with their actual start/end times. Next includes only events whose start is later than the current instant. At the exact start time, an event becomes current/concurrent instead of remaining in the upcoming row; an event ending now is no longer concurrent. If there is no future event, the upcoming row states that no later arrangement is scheduled. Future overlaps retain a separate warning, while active concurrent events are listed by name without repeating the same warning.
 
-The strip always favors a concrete item title over a task-count placeholder. With no active timed event, it shows the selected imported task or a task due today/overdue; otherwise it shows the next scheduled event or an available pending task. The expanded strip lists individual pending tasks and allows selecting the title to display. The selection is remembered locally. Pending tasks do not acquire an invented duration or progress bar. Refresh arrangements reads connected sources on demand and reports partial failures while retaining cached data.
+The strip always favors a concrete item title over a task-count placeholder. With no active timed event, it shows an explicitly selected imported task or a task due today; otherwise it shows the next scheduled event. When neither exists, undated and upcoming tasks take priority over overdue tasks. The expanded strip lists individual pending tasks and allows selecting the title to display. The selection is remembered locally. Pending tasks do not acquire an invented duration or progress bar. The header sync icon provides source status and manual refresh while retaining cached data on failure.
 
 Imported pending tasks have completion checkboxes in the calendar list, the expanded task list, and the selected-task header. Checking one records completion locally under `dayweave.tasks.completed.v1`, removes it from pending counts and strip selection, and keeps it hidden after refresh or restart. Calendar > Completed lists completed tasks still present in the connected sources; uncheck an item there to restore it. Completion does not change the source application or delete any local time block created from that task. Passing a task's deadline does not automatically mark it completed. Local completion is separate from the short-lived acknowledgements used for timed calendar events.
+
+The calendar task list has clickable All, Today, Upcoming, No Date, Overdue, and Completed filters, each with a count. All shows all unfinished tasks, placing today's tasks first and overdue tasks last; Completed is separate. Filters use the local deadline date and combine with the source selector, so counts reflect the selected source. Switching filters returns the list to the top. The expanded strip's compact task picker retains its collapsible date groups, with Overdue collapsed initially.
+
+Completion updates the current view without a toast. Imported tasks can still be restored by unchecking them in Completed. Calendar and sync controls live in the expanded header; idle and task views have no duplicate action footer or refresh-result message.
+
+Drag an imported task's title or grip into the hourly calendar to preview a one-hour local time block, snapped to fifteen minutes and shortened at midnight. Dropping opens the existing editor with the task title, chosen date, and time. Only Save creates the local block; Cancel makes no change. The source task stays pending and the source application is not modified. The existing Schedule Time button remains available. Calendar edges scroll while dragging, and unknown task identifiers are ignored.
+
+The expanded header's sync icon reports the last successful update on hover. Open it to see each source's update time, errors, and cached-content status. Each source can be refreshed independently; failed connections provide a retry or a direct route to their connection settings. Refresh failure does not erase cached arrangements.
+
+Three dismissible first-use hints explain moving the strip, opening its details, and adjusting the task/calendar divider. Using the corresponding control or dismissing its hint records that state under `dayweave.hints.seen.v1`. Hints do not reopen on subsequent launches.
 
 - The compact strip shows the selected task, remaining time, and a thin progress line along its upper edge. Progress measures elapsed time, not work completed.
 - Complete acknowledges the task locally. It does not delete or change the source calendar event.
@@ -119,3 +131,4 @@ The project uses Electron, React, TypeScript, electron-vite, Lucide icons, and n
 - `src/renderer/src/components/WeekCalendar.tsx`: week grid and local editing gestures.
 
 Earlier wallpaper attachment and calendar-frame sources remain in the repository for reference. The current application entry point does not load the desktop helper, attach to Explorer, create a wallpaper calendar, or expose pin-to-desktop controls.
+

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { colorRgb, dateKey, DAY_MINUTES, HOUR_HEIGHT, layoutDay, snapMinutes, timeLabel, toMinutes } from '../calendar'
 import type { TimedEntry } from '../types'
+import { TASK_DRAG_TYPE } from '../task-drag'
 interface Props {
   days: Date[]; entries: TimedEntry[]; now: Date
   allDayEntries?: TimedEntry[]
@@ -9,6 +10,7 @@ interface Props {
   onCreate: (date: string, start: string, end: string) => void
   onEdit: (entry: TimedEntry) => void
   onChange: (entry: TimedEntry) => void
+  onTaskDrop?: (id: string, date: string, start: string, end: string) => void
 }
 interface Gesture {
   type: 'create' | 'move' | 'resize'
@@ -18,7 +20,7 @@ interface Gesture {
 interface CreateMenu { x: number; y: number; date: string; start: string; end: string; parallel: boolean }
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 const SCROLL_KEY = 'dayweave.view-scroll'
-export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly = false, onCreate, onEdit, onChange }: Props) {
+export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly = false, onCreate, onEdit, onChange, onTaskDrop }: Props) {
   const scroll = useRef<HTMLDivElement>(null)
   const calendar = useRef<HTMLElement>(null)
   const menu = useRef<HTMLDivElement>(null)
@@ -26,9 +28,17 @@ export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly 
   const gestureRef = useRef<Gesture | null>(null)
   const [gesture, setGesture] = useState<Gesture | null>(null)
   const [createMenu, setCreateMenu] = useState<CreateMenu | null>(null)
+  const [taskDrop, setTaskDrop] = useState<{ day: number; start: number; end: number } | null>(null)
   const today = dateKey(now)
   const weekKey = days.map(dateKey).join(',')
   useEffect(() => { setCreateMenu(null) }, [weekKey, readOnly])
+  useEffect(() => {
+    const clear = () => setTaskDrop(null)
+    clear()
+    window.addEventListener('dragend', clear)
+    window.addEventListener('drop', clear)
+    return () => { window.removeEventListener('dragend', clear); window.removeEventListener('drop', clear) }
+  }, [weekKey])
   useEffect(() => {
     if (!createMenu) return
     menu.current?.querySelector('button')?.focus()
@@ -121,7 +131,31 @@ export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly 
       y: clamp(event.clientY - rect.top, 4, Math.max(4, rect.height - 54)), date: dateKey(days[day]),
       start: entry?.startTime ?? timeLabel(minute), end: entry?.endTime ?? timeLabel(Math.min(minute + 60, DAY_MINUTES)), parallel: Boolean(entry) })
   }
-  return <section ref={calendar} className="week-calendar" aria-label="每周时间安排">
+  function taskTarget(event: DragEvent, day: number) {
+    if (readOnly || !onTaskDrop || !content.current || !event.dataTransfer.types.includes(TASK_DRAG_TYPE)) return null
+    event.preventDefault(); event.stopPropagation()
+    event.dataTransfer.dropEffect = 'copy'
+    const minute = clamp(Math.floor((event.clientY - content.current.getBoundingClientRect().top) / HOUR_HEIGHT * 4) * 15, 0, DAY_MINUTES - 15)
+    return { day, start: minute, end: Math.min(minute + 60, DAY_MINUTES) }
+  }
+  function dragTask(event: DragEvent, day: number) {
+    if (readOnly || !onTaskDrop || !event.dataTransfer.types.includes(TASK_DRAG_TYPE)) return
+    const viewport = scroll.current?.getBoundingClientRect()
+    if (viewport && scroll.current) {
+      if (event.clientY < viewport.top + 30) scroll.current.scrollTop -= 18
+      else if (event.clientY > viewport.bottom - 30) scroll.current.scrollTop += 18
+    }
+    const target = taskTarget(event, day)
+    if (target) { setCreateMenu(null); setTaskDrop(target) }
+  }
+  function dropTask(event: DragEvent, day: number) {
+    const target = taskTarget(event, day)
+    if (!target) return
+    setTaskDrop(null)
+    const id = event.dataTransfer.getData(TASK_DRAG_TYPE)
+    if (id) onTaskDrop?.(id, dateKey(days[day]), timeLabel(target.start), timeLabel(target.end))
+  }
+  return <section ref={calendar} className="week-calendar" aria-label="每周时间安排" onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTaskDrop(null) }}>
     <div className="week-headings">
       <div className="time-zone">本地时间</div>
       {days.map(day => <div className={'day-heading' + (dateKey(day) === today ? ' today' : '')} key={dateKey(day)}>
@@ -138,7 +172,7 @@ export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly 
           const key = dateKey(day)
           const events = layoutDay(entries.filter(entry => entry.date === key))
           const currentMinute = now.getHours() * 60 + now.getMinutes()
-          return <div key={key} className="day-column" aria-label={key + '的时间安排'} onPointerDown={event => begin(event, index, 'create')} onContextMenu={event => openCreateMenu(event, index)}>
+          return <div key={key} className="day-column" aria-label={key + '的时间安排'} onPointerDown={event => begin(event, index, 'create')} onContextMenu={event => openCreateMenu(event, index)} onDragOver={event => dragTask(event, index)} onDrop={event => dropTask(event, index)}>
             {events.map(({ entry, lane, laneCount, laneSpan }) => <button key={entry.id} className={'calendar-event' + (toMinutes(entry.endTime) - toMinutes(entry.startTime) <= 30 ? ' is-short' : '') + (entry.readOnly ? ' is-subscribed' : '') + (gesture?.entry?.id === entry.id && gesture.moved ? ' being-dragged' : '')} style={{
               top: toMinutes(entry.startTime) / 60 * HOUR_HEIGHT,
               height: (toMinutes(entry.endTime) - toMinutes(entry.startTime)) / 60 * HOUR_HEIGHT,
@@ -154,6 +188,7 @@ export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly 
             {gesture?.day === index && <div className="selection-block" style={{ top: gesture.start / 60 * HOUR_HEIGHT, height: (gesture.end - gesture.start) / 60 * HOUR_HEIGHT }}>
               <strong>{gesture.entry?.title ?? '新日程'}</strong><span>{timeLabel(gesture.start)} – {timeLabel(gesture.end)}</span>
             </div>}
+            {taskDrop?.day === index && <div className="selection-block task-drop-preview" style={{ top: taskDrop.start / 60 * HOUR_HEIGHT, height: (taskDrop.end - taskDrop.start) / 60 * HOUR_HEIGHT }}><strong>松开后确认</strong><span>{timeLabel(taskDrop.start)} — {timeLabel(taskDrop.end)}</span></div>}
           </div>
         })}
       </div>

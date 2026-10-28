@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import { readFile, writeFile, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { safeStorage } from 'electron'
+import { microsoftDueDate } from './microsoft-date'
+import { applicationClients } from './application-clients'
 import { authorizeDesktop, GoogleConnectionError, googleJSON, tokenResult, type GoogleTokens } from './google-oauth'
 import { EMPTY_MICROSOFT, type ImportedTask, type MicrosoftTodoState, type TodoList } from '../shared/imports'
 
@@ -62,6 +64,7 @@ export class MicrosoftTodoConnection {
     const supplied = process.env.DAYWEAVE_MICROSOFT_CLIENT_ID
     if (validId(supplied)) this.clientId = supplied
     else try { const config = JSON.parse(await readFile(this.config, 'utf8')); if (validId(config.clientId)) this.clientId = config.clientId } catch { /* No developer configuration yet. */ }
+    if (!this.clientId) this.clientId = applicationClients().microsoftClientId || ''
     if (this.clientId) try {
       const file = JSON.parse(await readFile(this.token, 'utf8'))
       const tokens = JSON.parse(safeStorage.decryptString(Buffer.from(file.encrypted, 'base64')))
@@ -169,9 +172,11 @@ export class MicrosoftTodoConnection {
           for (const item of items) {
             if (!item || item.status === 'completed' || typeof item.id !== 'string') continue
             const id = 'microsoft-task:' + createHash('sha256').update(list.id + ':' + item.id).digest('hex').slice(0, 32)
-            const date = text(item.dueDateTime?.dateTime).slice(0, 10)
+            let date: string | undefined
+            try { date = microsoftDueDate(item.dueDateTime) }
+            catch { throw new GoogleConnectionError('response') }
             tasks.push({ id, title: text(item.title) || '未命名任务', provider: 'microsoft-todo', listId: list.id, listName: list.name,
-              dueDate: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
+              dueDate: date,
               description: text(item.body?.content, 12000).replace(/<br\s*\/?\s*>|<\/p\s*>/gi, '\n').replace(/<[^>]*>/g, '') })
           }
         } catch (error) {

@@ -12113,6 +12113,17 @@ class CalendarSubscription {
     this.controller?.abort();
   }
 }
+function applicationClients() {
+  try {
+    const data = JSON.parse(fs$1.readFileSync(node_path.join(electron.app.getAppPath(), "build/desktop-clients.json"), "utf8"));
+    return {
+      google: typeof data.google?.clientId === "string" && /^[\w.-]+\.apps\.googleusercontent\.com$/.test(data.google.clientId) ? { clientId: data.google.clientId, clientSecret: typeof data.google.clientSecret === "string" ? data.google.clientSecret : void 0 } : void 0,
+      microsoftClientId: typeof data.microsoftClientId === "string" && /^[0-9a-f-]{36}$/i.test(data.microsoftClientId) ? data.microsoftClientId : void 0
+    };
+  } catch {
+    return {};
+  }
+}
 const EMPTY_GOOGLE = {
   configured: false,
   connected: false,
@@ -12458,6 +12469,7 @@ class GoogleCalendarConnection {
       if (typeof client.clientId === "string" && /^[\w.-]+\.apps\.googleusercontent\.com$/.test(client.clientId)) this.client = client;
     } catch {
     }
+    this.client ??= applicationClients().google ?? null;
     if (this.client) {
       try {
         const tokens = await this.secret(this.tokenFile);
@@ -12751,6 +12763,30 @@ class GoogleCalendarConnection {
     this.controller.abort();
   }
 }
+function microsoftDueDate(value) {
+  if (value == null) return void 0;
+  const { dateTime, timeZone } = value;
+  if (typeof dateTime !== "string") throw new Error("Invalid Microsoft due date");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateTime)) return dateTime;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,7})?(Z|[+-]\d{2}:\d{2})?$/.exec(dateTime);
+  if (!match) throw new Error("Invalid Microsoft due date");
+  const zone = typeof timeZone === "string" ? timeZone.trim() : "";
+  let instant;
+  if (match[7] || /^(UTC|Etc\/UTC|GMT)$/i.test(zone)) {
+    instant = /* @__PURE__ */ new Date(dateTime.replace(/\.\d+/, "") + (match[7] ? "" : "Z"));
+  } else {
+    if (!zone || /[\r\n";]/.test(zone)) throw new Error("Invalid Microsoft due timezone");
+    const stamp = match.slice(1, 4).join("") + "T" + match.slice(4, 7).join("");
+    const event = sync.parseICS('BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:due\r\nDTSTART;TZID="' + zone + '":' + stamp + "\r\nEND:VEVENT\r\nEND:VCALENDAR").due;
+    if (!event?.start?.tz) throw new Error("Unsupported Microsoft due timezone");
+    new Intl.DateTimeFormat("en", { timeZone: event.start.tz });
+    instant = event.start;
+  }
+  if (!Number.isFinite(instant.getTime())) throw new Error("Invalid Microsoft due date");
+  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(instant);
+  const get = (type) => parts.find((part) => part.type === type).value;
+  return get("year") + "-" + get("month") + "-" + get("day");
+}
 const EMPTY_MICROSOFT = {
   configured: false,
   connected: false,
@@ -12837,6 +12873,7 @@ class MicrosoftTodoConnection {
       if (validId(config.clientId)) this.clientId = config.clientId;
     } catch {
     }
+    if (!this.clientId) this.clientId = applicationClients().microsoftClientId || "";
     if (this.clientId) try {
       const file = JSON.parse(await promises.readFile(this.token, "utf8"));
       const tokens = JSON.parse(electron.safeStorage.decryptString(Buffer.from(file.encrypted, "base64")));
@@ -12977,14 +13014,19 @@ class MicrosoftTodoConnection {
           for (const item of items2) {
             if (!item || item.status === "completed" || typeof item.id !== "string") continue;
             const id2 = "microsoft-task:" + node_crypto.createHash("sha256").update(list.id + ":" + item.id).digest("hex").slice(0, 32);
-            const date = text(item.dueDateTime?.dateTime).slice(0, 10);
+            let date;
+            try {
+              date = microsoftDueDate(item.dueDateTime);
+            } catch {
+              throw new GoogleConnectionError("response");
+            }
             tasks.push({
               id: id2,
               title: text(item.title) || "未命名任务",
               provider: "microsoft-todo",
               listId: list.id,
               listName: list.name,
-              dueDate: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : void 0,
+              dueDate: date,
               description: text(item.body?.content, 12e3).replace(/<br\s*\/?\s*>|<\/p\s*>/gi, "\n").replace(/<[^>]*>/g, "")
             });
           }
@@ -13491,6 +13533,10 @@ class FocusWindow {
 let focus = null;
 let tray = null;
 let quitting = false;
+const profile = electron.app.commandLine.getSwitchValue("user-data-dir");
+const profileDirectory = profile && node_path.isAbsolute(profile) ? profile : node_path.join(electron.app.getPath("appData"), "dayweave-desktop");
+fs$1.mkdirSync(profileDirectory, { recursive: true });
+electron.app.setPath("userData", profileDirectory);
 function createTray() {
   const size = 32, pixels = Buffer.alloc(size * size * 4);
   for (let y2 = 5; y2 < 27; y2++) for (let x2 = 3; x2 < 29; x2++) {

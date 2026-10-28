@@ -15,7 +15,7 @@ function readRatio() {
   } catch { return DEFAULT_RATIO }
 }
 
-export function CalendarTaskSplit({ taskProps, children }: { taskProps: ComponentProps<typeof ImportedTasks>; children: ReactNode }) {
+export function CalendarTaskSplit({ taskProps, children, onAdjust }: { taskProps: ComponentProps<typeof ImportedTasks>; children: ReactNode; onAdjust?: () => void }) {
   const container = useRef<HTMLDivElement>(null)
   const gesture = useRef<{ pointerId: number; y: number; height: number } | null>(null)
   const [ratio, setRatio] = useState(readRatio)
@@ -52,6 +52,7 @@ export function CalendarTaskSplit({ taskProps, children }: { taskProps: Componen
     gesture.current = null
     setDragging(false)
     save()
+    onAdjust?.()
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
   return <div ref={container} className={'calendar-task-split' + (expanded ? '' : ' tasks-collapsed') + (dragging ? ' is-resizing' : '')}>
@@ -73,12 +74,12 @@ export function CalendarTaskSplit({ taskProps, children }: { taskProps: Componen
         if (current?.pointerId === event.pointerId) update(current.height + event.clientY - current.y)
       }}
       onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
-      onDoubleClick={() => { currentRatio.current = DEFAULT_RATIO; setRatio(DEFAULT_RATIO); save(DEFAULT_RATIO) }}
+      onDoubleClick={() => { currentRatio.current = DEFAULT_RATIO; setRatio(DEFAULT_RATIO); save(DEFAULT_RATIO); onAdjust?.() }}
       onKeyDown={event => {
         const step = event.shiftKey ? 40 : 10
         const next = event.key === 'ArrowUp' ? taskHeight - step : event.key === 'ArrowDown' ? taskHeight + step : event.key === 'Home' ? minimum : event.key === 'End' ? maximum : null
         if (next === null) return
-        event.preventDefault(); event.stopPropagation(); update(next, true)
+        event.preventDefault(); event.stopPropagation(); update(next, true); onAdjust?.()
       }}><span /></div>}
     {children}
   </div>

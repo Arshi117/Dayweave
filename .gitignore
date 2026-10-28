@@ -133,3 +133,7 @@ google-client*.json
 google-authorization*.json
 token*.json
 *.log
+
+# Local desktop application registration and release artifacts
+build/desktop-clients.json
+release/

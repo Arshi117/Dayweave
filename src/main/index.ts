@@ -1,10 +1,17 @@
 import { app, globalShortcut, Menu, nativeImage, screen, Tray } from 'electron'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import { FocusWindow } from './focus-window'
 
 let focus: FocusWindow | null = null
 let tray: Tray | null = null
 let quitting = false
+
+// Preserve the existing profile across development and installed releases.
+const profile = app.commandLine.getSwitchValue('user-data-dir')
+const profileDirectory = profile && isAbsolute(profile) ? profile : join(app.getPath('appData'), 'dayweave-desktop')
+mkdirSync(profileDirectory, { recursive: true })
+app.setPath('userData', profileDirectory)
 
 function createTray() {
   const size = 32, pixels = Buffer.alloc(size * size * 4)

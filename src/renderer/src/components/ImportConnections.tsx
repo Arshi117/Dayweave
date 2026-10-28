@@ -8,15 +8,16 @@ import { GoogleConnection } from './GoogleConnection'
 import { MicrosoftTodoConnection } from './TaskConnections'
 
 interface Props {
+  initialView?: string
   google: GoogleCalendarState; feed: SubscriptionSnapshot; ticktick: SubscriptionSnapshot; microsoft: MicrosoftTodoState; links: CalendarLinksState
   onGoogle: (value: GoogleCalendarState) => void; onFeed: (value: SubscriptionSnapshot) => void
   onTickTick: (value: SubscriptionSnapshot) => void; onMicrosoft: (value: MicrosoftTodoState) => void
   onLinks: (value: CalendarLinksState) => void
 }
-export function ImportConnections({ google, feed, ticktick, microsoft, links, onGoogle, onFeed, onTickTick, onMicrosoft, onLinks }: Props) {
+export function ImportConnections({ initialView = 'home', google, feed, ticktick, microsoft, links, onGoogle, onFeed, onTickTick, onMicrosoft, onLinks }: Props) {
   const [address, setAddress] = useState(''), [pending, setPending] = useState(false)
   const [error, setError] = useState(''), [message, setMessage] = useState('')
-  const [view, setView] = useState('home')
+  const [view, setView] = useState(initialView)
   const [setup, setSetup] = useState<'google' | 'microsoft' | null>(null)
   const [sourceFile, setSourceFile] = useState<CalendarSource | null>(null)
   const [sourcePending, setSourcePending] = useState(false)

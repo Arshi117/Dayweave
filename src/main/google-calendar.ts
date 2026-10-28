@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { safeStorage, shell } from 'electron'
+import { applicationClients } from './application-clients'
 import type { CalendarRange, FocusEvent } from '../shared/focus'
 import { EMPTY_GOOGLE, type GoogleCalendarItem, type GoogleCalendarState } from '../shared/google-calendar'
 import { validCalendarRange } from './calendar-subscription'
@@ -86,6 +87,7 @@ export class GoogleCalendarConnection {
       const client = await this.secret<GoogleClient>(this.clientFile)
       if (typeof client.clientId === 'string' && /^[\w.-]+\.apps\.googleusercontent\.com$/.test(client.clientId)) this.client = client
     } catch { /* First connection has no imported application configuration. */ }
+    this.client ??= applicationClients().google ?? null
     if (this.client) {
       try {
         const tokens = await this.secret<GoogleTokens>(this.tokenFile)

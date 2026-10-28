@@ -8,6 +8,7 @@ import { WeekCalendar } from './WeekCalendar'
 import { EventDialog } from './EventDialog'
 import { CalendarTaskSplit } from './CalendarTaskSplit'
 import { ResizeGrip } from './ResizeGrip'
+import { FirstUseHint } from './FirstUseHint'
 import type { TaskCompletion } from '../task-completion'
 import type { ImportedTask } from '../../../shared/imports'
 import type { PlannerEntry, TimedEntry } from '../types'
@@ -25,8 +26,10 @@ interface Props {
   onSave: (entries: PlannerEntry[]) => boolean
   onRangeChange: (range: CalendarRange) => void
   onClose: () => void
+  showSplitHint?: boolean
+  onDismissSplitHint?: () => void
 }
-export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCompletion, now, height, left = false, above = false, onSave, onRangeChange, onClose }: Props) {
+export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCompletion, now, height, left = false, above = false, onSave, onRangeChange, onClose, showSplitHint, onDismissSplitHint }: Props) {
   const imported = subscription.events
   const panel = useRef<HTMLElement>(null)
   const local = useMemo<PlannerEntry[]>(() => Array.isArray(entries) ? entries.filter(entry => entry && typeof entry.id === 'string') : [], [entries])
@@ -34,6 +37,7 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
   const [anchor, setAnchor] = useState(() => new Date(now))
   const [source, setSource] = useState<'all' | 'local' | 'subscription'>('all')
   const [editing, setEditing] = useState<TimedEntry | null>(null)
+  const [schedulingTask, setSchedulingTask] = useState(false)
   const [inspecting, setInspecting] = useState<TimedEntry | null>(null)
   const week = startOfWeek(anchor)
   const weekKey = dateKey(week)
@@ -63,6 +67,7 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
     return () => cancelAnimationFrame(frame)
   }, [weekKey, hasEvents])
   function create(date: string, startTime: string, endTime: string) {
+    setSchedulingTask(false)
     setInspecting(null)
     setEditing({ id: crypto.randomUUID(), title: '', date, startTime, endTime, kind: 'block', completed: false, color: 'violet' })
   }
@@ -75,10 +80,17 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
     const date = task.dueDate && task.dueDate > today ? task.dueDate : today
     const hour = new Date(now).getHours()
     setInspecting(null)
+    setSchedulingTask(true)
     setEditing({ id: crypto.randomUUID(), title: task.title, date, startTime: String(hour).padStart(2, '0') + ':00',
       endTime: hour === 23 ? '24:00' : String(hour + 1).padStart(2, '0') + ':00', kind: 'block', completed: false, color: 'amber' })
   }
-  const calendar = <div className="calendar-schedule-pane"><WeekCalendar days={days} entries={[...(source === 'subscription' ? [] : timed), ...(source === 'local' ? [] : subscribed.filter(entry => !entry.allDay))]} allDayEntries={source === 'local' ? [] : subscribed.filter(entry => entry.allDay)} now={new Date(now)} onCreate={create} onEdit={entry => { if (entry.readOnly) setInspecting(entry); else setEditing(entry) }} onChange={save} />
+  function dropTask(id: string, date: string, startTime: string, endTime: string) {
+    const task = subscription.tasks?.find(item => item.id === id && !taskCompletion[item.id])
+    if (!task) return
+    setInspecting(null); setSchedulingTask(true)
+    setEditing({ id: crypto.randomUUID(), title: task.title, date, startTime, endTime, kind: 'block', completed: false, color: 'amber' })
+  }
+  const calendar = <div className="calendar-schedule-pane"><WeekCalendar days={days} entries={[...(source === 'subscription' ? [] : timed), ...(source === 'local' ? [] : subscribed.filter(entry => !entry.allDay))]} allDayEntries={source === 'local' ? [] : subscribed.filter(entry => entry.allDay)} now={new Date(now)} onCreate={create} onEdit={entry => { setSchedulingTask(false); if (entry.readOnly) setInspecting(entry); else setEditing(entry) }} onChange={save} onTaskDrop={dropTask} />
     {!hasEvents && !loading && <div className="drawer-empty-week"><span>{subscription.configured && !covered && source !== 'local' ? '这一周的订阅尚未读取完整' : source === 'subscription' ? '此订阅在这一周没有安排' : '这一周还没有安排'}</span>{nearest && <button onClick={() => setAnchor(new Date(nearest.start))}>查看最近安排</button>}</div>}
   </div>
   return <section ref={panel} className={'focus-calendar-panel' + (height < 520 ? ' is-short' : '')} style={{ height, '--calendar-panel-height': height + 'px' } as CSSProperties} aria-label="日历时间表">
@@ -97,7 +109,8 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
     {subscription.configured && source !== 'local' && hiddenTitles && <div className="drawer-source-notice" role="status">{subscription.connectionType === 'google' ? '这些安排的名称未向当前账号开放，请检查该日历的访问权限。' : subscription.sourceEventCount && subscription.sourceBusyCount === subscription.sourceEventCount ? '来源文件仅提供忙闲信息，未提供课程名称。' : '此订阅中的安排名称为“Busy”（忙碌），未提供课程名称。'}{subscription.addressKind === 'public' ? ' 当前连接的是公开 iCal 订阅。' : ''}</div>}
     {subscription.configured && subscription.error && source !== 'local' && <div className="drawer-source-notice" role="alert">{subscription.error}</div>}
     {source !== 'local' && subscription.importWarnings?.map(warning => <div key={warning} className="drawer-source-notice" role="status">{warning}</div>)}
-    {source !== 'local' && Boolean(subscription.tasks?.length) ? <CalendarTaskSplit taskProps={{ tasks: subscription.tasks || [], completed: taskCompletion, onCompletion: onTaskCompletion, today: dateKey(new Date(now)), onSchedule: scheduleTask }}>{calendar}</CalendarTaskSplit> : calendar}
+    {showSplitHint && source !== 'local' && Boolean(subscription.tasks?.length) && <FirstUseHint kind="split" onDismiss={() => onDismissSplitHint?.()} />}
+    {source !== 'local' && Boolean(subscription.tasks?.length) ? <CalendarTaskSplit onAdjust={onDismissSplitHint} taskProps={{ tasks: subscription.tasks || [], completed: taskCompletion, onCompletion: onTaskCompletion, today: dateKey(new Date(now)), onSchedule: scheduleTask }}>{calendar}</CalendarTaskSplit> : calendar}
     <footer className="drawer-calendar-footer"><span><i className="local-dot" />本机 {localCount}<i className="subscription-dot" />订阅 {importedCount}</span><span>拖边缘调整大小 · 拖选空白新建日程</span></footer>
     <ResizeGrip target="calendar" edge={left ? 'left' : 'right'} />
     <ResizeGrip target="calendar" edge={above ? 'top' : 'bottom'} />
@@ -109,6 +122,6 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
       {inspecting.provider === 'google' && inspecting.sourceEventId && inspecting.webUrl && <button className="calendar-original-link" onClick={() => { void window.focusControls?.openGoogleEvent(inspecting.sourceEventId!) }}>在 Google 日历中查看</button>}
       <button className="calendar-create-parallel" onClick={() => { const hour = new Date(now).getHours(); create(inspecting.date, inspecting.allDay ? String(hour).padStart(2, '0') + ':00' : inspecting.startTime, inspecting.allDay ? hour === 23 ? '24:00' : String(hour + 1).padStart(2, '0') + ':00' : inspecting.endTime) }}><Plus size={13} />{inspecting.allDay ? '为此事项安排时间' : '同一时段新建日程'}</button>
       <small>请在原日历中修改此安排。</small></aside>}
-    {editing && <EventDialog key={editing.id} entry={editing} existing={local.some(item => item.id === editing.id)} onSave={save} onClose={() => setEditing(null)} onCreateParallel={() => create(editing.date, editing.startTime, editing.endTime)} onDelete={() => { if (onSave(local.filter(item => item.id !== editing.id))) setEditing(null) }} />}
+    {editing && <EventDialog key={editing.id} entry={editing} notice={schedulingTask ? '确认时间后保存为本机日程。原应用的待办不会被修改或标记完成。' : undefined} existing={local.some(item => item.id === editing.id)} onSave={save} onClose={() => setEditing(null)} onCreateParallel={() => create(editing.date, editing.startTime, editing.endTime)} onDelete={() => { if (onSave(local.filter(item => item.id !== editing.id))) setEditing(null) }} />}
   </section>
 }
