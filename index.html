@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f7f9">
+<meta name="description" content="Dayweave 是 Windows 上的悬浮任务条。汇集已有日历和待办，随时看见当前安排与剩余时间，需要时再展开日历。">
+<title>Dayweave — 此刻的安排，一直在眼前</title>
+<link rel="icon" href="assets/icon.png"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="nav wrap"><a class="brand" href="#" aria-label="Dayweave 首页"><img src="assets/icon.png" alt="" width="30" height="30">Dayweave<span class="beta">BETA</span></a><nav aria-label="主导航"><a href="#how">如何使用</a><a href="#connections">连接来源</a><a href="#faq">常见问题</a></nav><button class="nav-action" data-release>获取测试版 <span aria-hidden="true">↗</span></button></header>
+<main id="main">
+<section class="hero wrap" aria-labelledby="hero-title">
+<div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> WINDOWS 悬浮任务条</p><h1 id="hero-title">此刻的安排，<br>一直在<span class="underlined">眼前。</span></h1><p class="hero-description">日程和待办，放在眼前。<br>让一条轻巧的小窗，陪你把手头的事做下去。</p><div class="hero-actions"><a class="button primary" href="#demo">试试悬浮条 <span aria-hidden="true">↓</span></a><button class="button secondary" data-release>获取 Windows 测试版 <span aria-hidden="true">↗</span></button></div><p class="hero-note">保留原来的日历和待办习惯 · 按需展开 · 随手调整大小</p></div>
+<div class="hero-aside"><p class="aside-number">01 / CURRENTLY</p><p>计划留在原来的地方。<br>当前这一件，留在眼前。</p><span class="curved-arrow" aria-hidden="true">↙</span></div>
+</section>
+<section class="demo-section wrap" id="demo" aria-label="悬浮任务条交互演示">
+<p class="preview-label">App 界面预览 · 示例数据</p>
+<p class="preview-description">Google 日历和 Microsoft To Do，在同一个小窗里。拉开小条，查看下一项安排和具体待办；点击日历图标查看一周安排。</p>
+<div class="app-preview" id="desktop">
+<iframe id="product-demo" class="product-demo" src="product-demo/index.html?surface=focus" title="Dayweave 实际界面预览" sandbox="allow-scripts allow-same-origin" referrerpolicy="same-origin"></iframe>
+</div>
+<div class="demo-controls"><p><span class="control-label">试着操作</span><span class="desktop-instruction">拖动小条 · 拖边缘调长度 · 点下沿展开待办与日历</span><span class="mobile-instruction">点击小条下沿，展开待办与日历</span></p><button id="reset-demo" title="重置示例数据">重置示例</button></div>
+<p class="demo-disclaimer">界面复用当前 App，日程与待办均为示例数据。只有设置了起止时间的日程才显示倒计时。真实账号导入与窗口置顶需在 Windows 应用中使用。</p>
+</section>
+<section class="statement wrap" id="how"><p class="eyebrow">LESS SWITCHING. MORE DOING.</p><h2>安排已经记下，<br>查看它，可以再轻一点。</h2><p>写作业、看课程、准备面试时，<br>不用反复切回完整的日历窗口。</p></section>
+<section class="steps wrap" aria-label="使用方式"><article><span class="step-number">01</span><h3>接上已有安排</h3><p>连接日历或待办账号，或添加有效的日历订阅。熟悉的工具继续照常用。</p><div class="sources-mini" aria-hidden="true"><span>日历</span><span>待办</span><span>课表</span><span class="mini-arrow">→</span><span class="mini-weave">W</span></div></article><article><span class="step-number">02</span><h3>当前这一件，常驻眼前</h3><p>待办显示任务名称，展开后可以勾选完成；有起止时间的日程显示剩余时间，结束后自然切换。</p><div class="flow-note">有时间段的安排，随时间自然切换。</div></article><article><span class="step-number">03</span><h3>需要更多，再展开</h3><p>拉开小条查看详情，再点日历图标看一周安排。待办也可以在这里安排时间。</p><div class="tiny-calendar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><span></span></div></article></section>
+<section class="quiet-section"><div class="wrap quiet-grid"><div><p class="eyebrow">MADE TO STAY OUT OF YOUR WAY</p><h2>小小一条，<br>留出你的工作空间。</h2><p>位置、长度、外观，调成适合自己的样子。<br>信息由你展开，注意力留给手头的事。</p></div><div class="quiet-details"><div><span>01</span><p><strong>长度由你决定</strong>拖动边缘调整，不必占满屏幕。</p></div><div><span>02</span><p><strong>日程按时间走</strong>时间过去就切换，不因没点完成而一直计超时。</p></div><div><span>03</span><p><strong>保留原来的安排</strong>读取外部来源；在 Dayweave 的本地操作不会改写原日历和待办。</p></div></div></div></section>
+<section class="connections wrap" id="connections"><div class="section-heading"><p class="eyebrow">YOUR PLANS, ALREADY HERE</p><h2>从你已经在用的地方开始。</h2><p>选择合适的连接方式，带上已有的安排。</p></div><div class="connection-list"><div><h3>Google 日历</h3><p>登录账号，选择要显示的日历。</p><span class="connection-type">账号授权</span></div><div><h3>Microsoft To Do</h3><p>读取清单和截止日期；按需安排时间。</p><span class="connection-type">账号授权</span></div><div><h3>TickTick</h3><p>使用“订阅到其他日历”提供的链接。</p><span class="connection-type">日历订阅</span></div><div><h3>学校课表与其他日历</h3><p>需要学校或服务提供有效的 iCal / ICS 订阅。</p><span class="connection-type">日历订阅</span></div></div><p class="connection-note">可读取的内容受来源提供的信息和账号权限限制。仅有截止日期的待办不会被自动当作正在进行的日程。</p></section>
+<section class="faq wrap" id="faq"><div><p class="eyebrow">A FEW THINGS TO KNOW</p><h2>使用前，你可能想问。</h2></div><div class="faq-list"><details><summary>这是一个新的日历或待办软件吗？<span>+</span></summary><p>Dayweave 的核心是悬浮任务条。你可以保留原来的工具，用小条查看当前安排，需要时再展开内置日历，也可以创建本机日程。</p></details><details><summary>待办没有具体开始时间，怎么办？<span>+</span></summary><p>它会出现在待办列表中，你可以选择关注，或为它安排一个时间段。截止日期只表示何时需要完成，不会被当作你此刻就在做它。</p></details><details><summary>没点完成，会一直显示超时吗？<span>+</span></summary><p>按时间排好的日程结束后会自然切换。待办的完成状态由你决定；在 Dayweave 标记完成不会同步修改原应用。</p></details><details><summary>支持哪些电脑？现在能下载吗？<span>+</span></summary><p>目前提供 Windows x64 的 0.1.0 测试版。本页尚未提供公开安装包下载，请关注 GitHub 发布页。macOS 和手机端暂未提供。</p></details><details><summary>连接账号和学校日历有什么要求？<span>+</span></summary><p>Google 与微软连接需要在系统浏览器中授权。Google 测试阶段可能需要加入测试用户，学校或组织也可能限制授权。课表订阅需要服务提供有效链接，不能仅凭任意学校网页地址读取。</p></details></div></section>
+<section class="last-call wrap"><span class="last-symbol" aria-hidden="true">✳</span><p class="eyebrow">ONE SMALL STRIP. YOUR CURRENT PLAN.</p><h2>留一小块地方，<br>给眼前这一件事。</h2><a class="button primary" href="#demo">先体验一下 <span aria-hidden="true">↑</span></a><button class="text-button" data-release>了解 Windows 测试版 ↗</button><p>Dayweave 0.1.0 · 正在打磨的小工具</p></section>
+</main>
+<footer class="footer wrap"><a class="brand" href="#"><img src="assets/icon.png" alt="" width="24" height="24">Dayweave</a><span>当前安排，随时可见。</span><a href="https://github.com/Arshi117/Dayweave" target="_blank" rel="noopener noreferrer">GitHub ↗</a><span>© 2026 Dayweave</span></footer>
+<dialog id="release-dialog" aria-labelledby="release-title"><button class="dialog-close" id="dialog-close" aria-label="关闭测试版说明">×</button><p class="eyebrow">WINDOWS · EARLY PREVIEW</p><h2 id="release-title">来试试 Dayweave。</h2><p>Windows x64 测试安装版已制作完成，公开下载尚未开放。本页可以先体验悬浮条的交互。</p><div class="release-facts"><span>版本 <strong>0.1.0</strong></span><span>平台 <strong>Windows x64</strong></span><span>状态 <strong>公开下载待开放</strong></span></div><a class="button primary" href="https://github.com/Arshi117/Dayweave/releases" target="_blank" rel="noopener noreferrer">关注 GitHub 发布页 ↗</a><p class="release-note">测试安装包尚未签名，Windows 可能提示未知发布者。Google 登录可能需要加入测试用户。</p></dialog>
+<p class="sr-only" role="status" aria-live="polite" id="demo-status"></p>
+<script src="app.js" defer></script>
+</body></html>
+
+
+

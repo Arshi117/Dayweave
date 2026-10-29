@@ -1,0 +1,194 @@
+{
+  "productVersion": "0.1.0",
+  "source": "current D:/Dayweave renderer source",
+  "uiModified": false,
+  "assets": [
+    {
+      "file": "assets/index-C-424XD6.js",
+      "sha256": "e4b51bd0b9f4b3a38137929cbe061d9e83a6c378de1308d390e4a13098aca58c"
+    },
+    {
+      "file": "assets/index-CvQM3vBD.css",
+      "sha256": "0a50941ad581a66f09be13f773eb616b8f5117ec0001e62eb5c11a208b800986"
+    }
+  ],
+  "sourceAudit": {
+    "source": "D:/Dayweave",
+    "builtAt": "2026-10-29T13:31:02.667Z",
+    "uiModified": false,
+    "files": [
+      {
+        "path": "src/renderer/src/App.tsx",
+        "sha256": "1230888b7f4670188914e1350aab734953479c5d2b4439fd8f9076de31a1f0a2"
+      },
+      {
+        "path": "src/renderer/src/appearance.ts",
+        "sha256": "4721540b5e55b8b222d1de7cab2a8e81811acafd54ce2fb00a907661e04fb7ef"
+      },
+      {
+        "path": "src/renderer/src/calendar-frame.ts",
+        "sha256": "1fc92acb00a7c8793af4aa30e4d3f76f92d3cf8472388ff6dcdb901a9e999255"
+      },
+      {
+        "path": "src/renderer/src/calendar-imports.ts",
+        "sha256": "4b3a8d18963dafe3a5e78a5dba8521095f8a740667c201bd8f8756445e150ec8"
+      },
+      {
+        "path": "src/renderer/src/calendar-panel.css",
+        "sha256": "008824ef747571d9a046c8b2f452cc7baded95f95b0bf0b4c2d341247336b46e"
+      },
+      {
+        "path": "src/renderer/src/calendar-source.css",
+        "sha256": "560f61344498939d6160c56cd03a96a505bbab2741000afe101897f5db62461b"
+      },
+      {
+        "path": "src/renderer/src/calendar-task-split.css",
+        "sha256": "3ea70e869f2a00dbd936c3e89d6ca87a3fe05dc20b758a05e836517cb85dbce6"
+      },
+      {
+        "path": "src/renderer/src/calendar.ts",
+        "sha256": "1c7b9d5404066bc9878465b1557fdeb04209d0b46aaf5662334c053b0e10c999"
+      },
+      {
+        "path": "src/renderer/src/components/AppearancePicker.tsx",
+        "sha256": "833f6c268526207a27df781a4836a7e5d295537280fa7002c72340e2d03c4939"
+      },
+      {
+        "path": "src/renderer/src/components/CalendarPanel.tsx",
+        "sha256": "5695955f4c21a5b0bd08b01772036ad9eb005dc747f4b2560bb245860f7bb4a9"
+      },
+      {
+        "path": "src/renderer/src/components/CalendarTaskSplit.tsx",
+        "sha256": "5f8af8fd1c57c372e1e68090220c26ba435fcba258f35ccdb9e65678643d6477"
+      },
+      {
+        "path": "src/renderer/src/components/EditModeButton.tsx",
+        "sha256": "250c84ccecbd6dfb9d05f3932f36f347ec8713d2567e9e5840e5ed0ecdea0f72"
+      },
+      {
+        "path": "src/renderer/src/components/EventDialog.tsx",
+        "sha256": "c55ef0f959dd5e0cb43bc1e68c73accc795ec051d95c726068270e268bb1f15d"
+      },
+      {
+        "path": "src/renderer/src/components/FirstUseHint.tsx",
+        "sha256": "12964cd2bdf13f3f4c48d31ad4b44926e6d9f0eeadfb46b6e16eb8ba49ddd7a0"
+      },
+      {
+        "path": "src/renderer/src/components/FocusTasks.tsx",
+        "sha256": "b44606fde217c43c8d926edc0a47a7e31cf16998fcb0b50ac7d593bde7dd5145"
+      },
+      {
+        "path": "src/renderer/src/components/GoogleConnection.tsx",
+        "sha256": "02ad0376caae5cf58b9ef98d372726e6eb086ef734be70b0b82bb374bcbd3b3f"
+      },
+      {
+        "path": "src/renderer/src/components/ImportConnections.tsx",
+        "sha256": "8264aa6cb8b63a0b6a497626bff876545bfea7b7e0dc8787ba3d8609d87e2ed0"
+      },
+      {
+        "path": "src/renderer/src/components/ImportedTasks.tsx",
+        "sha256": "e8d8e9fbb827f235ebfaad8bbafa54295f5cb0fc4642ed6a8c9dc94a192b4936"
+      },
+      {
+        "path": "src/renderer/src/components/ResizeGrip.tsx",
+        "sha256": "1e37eaeb6f4ad0f4119921a0de0a9fb86b4a522bce645fef3d6974311083d9a5"
+      },
+      {
+        "path": "src/renderer/src/components/SyncStatus.tsx",
+        "sha256": "cb93b39514643751c2c1db06e3f7e877889fbf0b5011c152d4e7cd57311b4fe3"
+      },
+      {
+        "path": "src/renderer/src/components/TaskConnections.tsx",
+        "sha256": "7e908c158801f398c95425771c276ac9dd71e6e348ac3d9ff4845855c5df7225"
+      },
+      {
+        "path": "src/renderer/src/components/TaskGroups.tsx",
+        "sha256": "f9cd71d975dda64a31bdc372a0a15a552069407323cd4a8d14ad3f951dcc09f4"
+      },
+      {
+        "path": "src/renderer/src/components/WeekCalendar.tsx",
+        "sha256": "d5de3120c7243c521158e0ea8e39b9a6da687647a235771f21291ead4d8ed994"
+      },
+      {
+        "path": "src/renderer/src/DesktopControl.tsx",
+        "sha256": "b114fd0cd13073446582993c6a0e8f439e2a368f3df0839fa8de395fd424232c"
+      },
+      {
+        "path": "src/renderer/src/focus-resize.css",
+        "sha256": "9f50ba0a6d7ae69cda01d23308d40ac31411d1eb54f3e0b0b5ff9dcd49b9bd7a"
+      },
+      {
+        "path": "src/renderer/src/focus-theme.css",
+        "sha256": "c9dc4a6222f0bc586a7109789ac95a29e4c37dd63ebbef50f401ac2dcae6279e"
+      },
+      {
+        "path": "src/renderer/src/focus.css",
+        "sha256": "035e4eb97c480b293e58640aeb316bc2f8fefccd3ff6832ac362e085da80684f"
+      },
+      {
+        "path": "src/renderer/src/FocusBar.tsx",
+        "sha256": "a1ff5de3fcbdcdf08d3a2669be354631be39c8257b21baecd69f2b18d075ecc0"
+      },
+      {
+        "path": "src/renderer/src/main.tsx",
+        "sha256": "0f65ae8b0dc84e5abda34a444f40119a53207af06f8924a1450ee728a2d58d44"
+      },
+      {
+        "path": "src/renderer/src/styles.css",
+        "sha256": "fbc05992c775579ae0014c53bb0e1662231cdb474c1a8b24594e3f5ebe46765b"
+      },
+      {
+        "path": "src/renderer/src/task-completion.css",
+        "sha256": "41ed390c1ff2ad49d8ed42e8b63c4dbe24d1f760433d83f6f5635bf930c06c08"
+      },
+      {
+        "path": "src/renderer/src/task-completion.ts",
+        "sha256": "1eb64e32daeb191df40b1ad2c27c84d83c35fc903b90291752e4e17892250c91"
+      },
+      {
+        "path": "src/renderer/src/task-drag.ts",
+        "sha256": "c0d2f6389224f65ad94201394eb1eca24f3da3c3d7270b4d72cea217b83bed22"
+      },
+      {
+        "path": "src/renderer/src/types.ts",
+        "sha256": "56b4c8341cc5427637698ca64154b123efa00b5f10d59d572c277b37e72c5c35"
+      },
+      {
+        "path": "src/renderer/src/usability.css",
+        "sha256": "acf489a05e288cfeb6b2f092d44b3258314b37c1fb7b6c24236d24ab5981625b"
+      },
+      {
+        "path": "src/renderer/src/useCalendarFrame.ts",
+        "sha256": "51e9098639e58284616a6ac70d9a26d8aa89930ff7726d3d898b5e6e85169b69"
+      },
+      {
+        "path": "src/shared/calendar-frame.ts",
+        "sha256": "7ca2db8c5eaf167be86d53c13e547ec38456bffe131d88026502c6057c88ef93"
+      },
+      {
+        "path": "src/shared/desktop-layout.ts",
+        "sha256": "1553d04ea7a25bcb6865583ab937461a1a8bf43fda75bdb854cb6697e9d23867"
+      },
+      {
+        "path": "src/shared/focus-window-layout.ts",
+        "sha256": "a002a4d008a25b1cafdd02c93cd1e86f3b8b3807d165820bd3a1972a2a16b3ce"
+      },
+      {
+        "path": "src/shared/focus.ts",
+        "sha256": "920d3418eb8f7c2d858a3aed80aef366f872c1eaf13dedaf1e45870971ef0935"
+      },
+      {
+        "path": "src/shared/google-calendar.ts",
+        "sha256": "efc4b854edadb950e29385dce1a2b2b1d99e1ac301a0d34b4ee7268e599e96e3"
+      },
+      {
+        "path": "src/shared/import-links.ts",
+        "sha256": "46f66e2bd6932f90ab5befea585c6211f5d7b68280122fcceb2fe9811f99a8d4"
+      },
+      {
+        "path": "src/shared/imports.ts",
+        "sha256": "5973991293114046ce6bbf60a5a9a5ab809198c0aa4b98daeee621d88b234e27"
+      }
+    ]
+  }
+}
