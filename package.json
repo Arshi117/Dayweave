@@ -1,6 +1,6 @@
 {
   "name": "dayweave-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A calm, always-visible desktop planner.",
   "main": "out/main/index.js",
@@ -11,7 +11,9 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "dist:win": "node scripts/prepare-release.cjs && npm run typecheck && npm run build && electron-builder --win --x64 --publish never",
-    "pack:win": "node scripts/prepare-release.cjs && npm run typecheck && npm run build && electron-builder --win --x64 --dir --publish never"
+    "pack:win": "node scripts/prepare-release.cjs && npm run typecheck && npm run build && electron-builder --win --x64 --dir --publish never",
+    "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
+    "dist:mac": "node scripts/prepare-release.cjs && npm run typecheck && npm run build && electron-builder --mac zip --arm64 --x64 --publish never"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

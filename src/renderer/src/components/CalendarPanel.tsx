@@ -95,7 +95,7 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
   </div>
   return <section ref={panel} className={'focus-calendar-panel' + (height < 520 ? ' is-short' : '')} style={{ height, '--calendar-panel-height': height + 'px' } as CSSProperties} aria-label="日历时间表">
     <header className="drawer-calendar-header">
-      <div><span className="drawer-eyebrow">一周安排</span><h2>{month}</h2></div>
+      <h2>{month}</h2>
       <nav aria-label="切换查看周次">
         <button onClick={() => setAnchor(new Date())}>今天</button>
         <button className="drawer-icon" aria-label="上一周" title="上一周" onClick={() => setAnchor(addDays(anchor, -7))}><ChevronLeft size={16} /></button>
@@ -104,14 +104,13 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
         <button className="drawer-icon" aria-label="收起日历" title="收起日历" onClick={onClose}><X size={16} /></button>
       </nav>
     </header>
-    <div className="drawer-calendar-source"><span title={subscription.calendarName || subscription.sourceLabel}>{subscription.configured ? '订阅：' + (subscription.calendarName || subscription.sourceLabel) : '尚未连接订阅日历'}</span><label>显示<select aria-label="显示哪些日程" value={source} onChange={event => setSource(event.target.value as typeof source)}><option value="all">全部安排</option><option value="subscription">仅订阅日历</option><option value="local">仅本机日程</option></select></label></div>
-    <div className="drawer-calendar-summary"><span>{days[0].getMonth() + 1}月{days[0].getDate()}日 — {days[6].getMonth() + 1}月{days[6].getDate()}日</span><span>{loading ? '正在读取这一周…' : visible.length + ' 项安排'}</span></div>
+    <div className="drawer-calendar-source"><span>{days[0].getMonth() + 1}月{days[0].getDate()}日 — {days[6].getMonth() + 1}月{days[6].getDate()}日</span><select aria-label="显示哪些日程" title={subscription.calendarName || subscription.sourceLabel || '日程来源'} value={source} onChange={event => setSource(event.target.value as typeof source)}><option value="all">全部安排 {localCount + importedCount}</option><option value="subscription">订阅 {importedCount}</option><option value="local">本机 {localCount}</option></select></div>
+    {loading && <div className="drawer-loading" role="status">正在读取本周安排…</div>}
     {subscription.configured && source !== 'local' && hiddenTitles && <div className="drawer-source-notice" role="status">{subscription.connectionType === 'google' ? '这些安排的名称未向当前账号开放，请检查该日历的访问权限。' : subscription.sourceEventCount && subscription.sourceBusyCount === subscription.sourceEventCount ? '来源文件仅提供忙闲信息，未提供课程名称。' : '此订阅中的安排名称为“Busy”（忙碌），未提供课程名称。'}{subscription.addressKind === 'public' ? ' 当前连接的是公开 iCal 订阅。' : ''}</div>}
     {subscription.configured && subscription.error && source !== 'local' && <div className="drawer-source-notice" role="alert">{subscription.error}</div>}
     {source !== 'local' && subscription.importWarnings?.map(warning => <div key={warning} className="drawer-source-notice" role="status">{warning}</div>)}
     {showSplitHint && source !== 'local' && Boolean(subscription.tasks?.length) && <FirstUseHint kind="split" onDismiss={() => onDismissSplitHint?.()} />}
     {source !== 'local' && Boolean(subscription.tasks?.length) ? <CalendarTaskSplit onAdjust={onDismissSplitHint} taskProps={{ tasks: subscription.tasks || [], completed: taskCompletion, onCompletion: onTaskCompletion, today: dateKey(new Date(now)), onSchedule: scheduleTask }}>{calendar}</CalendarTaskSplit> : calendar}
-    <footer className="drawer-calendar-footer"><span><i className="local-dot" />本机 {localCount}<i className="subscription-dot" />订阅 {importedCount}</span><span>拖边缘调整大小 · 拖选空白新建日程</span></footer>
     <ResizeGrip target="calendar" edge={left ? 'left' : 'right'} />
     <ResizeGrip target="calendar" edge={above ? 'top' : 'bottom'} />
     <ResizeGrip target="calendar" edge={above ? left ? 'top-left' : 'top-right' : left ? 'bottom-left' : 'bottom-right'} />

@@ -19,12 +19,13 @@ test('time progress, current event and next event use real time', () => {
   assert.ok(Math.abs(view.progress-1/3)<.00001)
   assert.equal(view.conflicts.length,0)
 })
-test('the selected task remains visible when interrupted past its scheduled end', () => {
+test('ended schedules yield to the next active event without requiring completion', () => {
   const view = focusView([event('a',14,15),event('b',15,16)],{eventId:'a'},{},at(15)+5*60_000)
-  assert.equal(view.current.id,'a')
-  assert.equal(view.overdue,true)
-  assert.equal(view.next.id,'b')
-  assert.equal(view.progress,1)
+  assert.equal(view.current.id,'b')
+  assert.equal(view.next,null)
+  assert.equal(view.end,at(16))
+  assert.ok(Math.abs(view.progress-1/12)<.00001)
+  assert.equal(focusView([event('a',14,15)],{eventId:'a'},{},at(15)).current,null)
 })
 test('extension reports conflict and does not move original calendar events', () => {
   const a = Object.freeze(event('a',14,15)), b=Object.freeze(event('b',15,16))
@@ -39,11 +40,10 @@ test('completing a task advances to the active next one and cancellation drops s
   assert.equal(view.current.id,'b')
   assert.equal(focusView([event('b',15,16)],{eventId:'cancelled'}, {},at(15)).current.id,'b')
 })
-test('snoozing suppresses the reminder while elapsed time keeps moving', () => {
-  const session = {eventId:'a',remindAt:at(15)}
-  const before=focusView([event('a',14,16)],session,{},at(14))
-  const after=focusView([event('a',14,16)],session,{},at(14)+30*60_000)
-  assert.equal(after.snoozed,true)
-  assert.ok(after.progress>before.progress)
-  assert.equal(focusView([event('a',14,16)],session,{},at(15)).snoozed,false)
+test('already-started overlapping events are concurrent, not the next event', () => {
+  const b = {...event('b',14,16),start:at(14)+30*60_000}
+  const view = focusView([event('a',14,15),b,event('c',17,18)],null,{},at(14)+45*60_000)
+  assert.equal(view.current.id,'a')
+  assert.deepEqual(view.concurrent.map(item=>item.id),['b'])
+  assert.equal(view.next.id,'c')
 })

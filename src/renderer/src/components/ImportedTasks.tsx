@@ -4,6 +4,7 @@ import type { ImportedTask } from '../../../shared/imports'
 import { taskProviderName } from '../../../shared/imports'
 import type { TaskCompletion } from '../task-completion'
 import { startTaskDrag } from '../task-drag'
+import { taskDeadline } from './FocusTasks'
 
 const categories = [
   { id: 'all', label: '全部', empty: '暂无待办事项。' },
@@ -40,14 +41,17 @@ export function ImportedTasks({ tasks, completed, today, onCompletion, onSchedul
   if (!tasks.length) return null
   const renderTask = (task: ImportedTask) => <article key={task.id} className={showCompleted ? 'is-completed' : task.dueDate && task.dueDate < today ? 'is-overdue' : ''}>
     <input className="task-completion-checkbox" type="checkbox" checked={showCompleted} aria-label={(showCompleted ? '恢复待办：' : '完成待办：') + task.title} title={showCompleted ? '取消勾选，恢复到待办' : '仅在 Dayweave 标记完成，不会更改原应用'} onChange={event => onCompletion(task.id, event.target.checked)} />
-    <div><div className="task-drag-title" draggable={!showCompleted} title={showCompleted ? task.title : '拖入日历安排时间：' + task.title} onDragStart={event => { if (!showCompleted) startTaskDrag(event.dataTransfer, task.id) }}>
-      {!showCompleted && <GripVertical size={12} aria-hidden="true" />}<strong>{task.title}</strong></div>
-      <span>{taskProviderName(task)}{task.provider !== 'ical' ? ' · ' + task.listName : ''} · {task.dueDate ? task.dueDate + (task.dueAt ? ' ' + new Date(task.dueAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '') + (task.dueDate < today ? ' 已过截止日期' : ' 截止') : '未设置截止日期'}</span>{task.description && <p>{task.description}</p>}</div>
-    {!showCompleted && <button title={'为“' + task.title + '”安排时间'} onClick={() => onSchedule(task)}><CalendarPlus size={12} />安排时间</button>}
+    <details className="imported-task-content">
+      <summary className="task-drag-title" draggable={!showCompleted} title={task.title + '\n' + taskDeadline(task, today) + (showCompleted ? '' : '\n可拖入日历安排时间')} onDragStart={event => { if (!showCompleted) startTaskDrag(event.dataTransfer, task.id) }}>
+        {!showCompleted && <GripVertical size={12} aria-hidden="true" />}<strong>{task.title}</strong><span className="task-deadline" aria-label={'截止时间：' + taskDeadline(task, today)}>{taskDeadline(task, today)}</span><ChevronDown size={12} className="task-detail-chevron" aria-hidden="true" />
+      </summary>
+      <div className="imported-task-detail"><span>{taskProviderName(task)}{task.provider !== 'ical' && task.listName ? ' · ' + task.listName : ''}</span>{task.description && <p>{task.description}</p>}<small>完成状态仅保存在 Dayweave</small></div>
+    </details>
+    {!showCompleted && <button className="task-schedule-action" aria-label={'为“' + task.title + '”安排时间'} title="安排时间" onClick={() => onSchedule(task)}><CalendarPlus size={15} /></button>}
   </article>
   return <details className="imported-tasks" open onToggle={event => onExpandedChange?.(event.currentTarget.open)}>
-    <summary><ListTodo size={13} />待办事项 <span>{pendingCount}</span><small>勾选完成仅保存在 Dayweave</small><ChevronDown size={13} className="imported-tasks-chevron" /></summary>
-    <div className="imported-tasks-toolbar"><div className="task-filter-chips" role="group" aria-label="筛选待办状态">{categories.map(item => <button key={item.id} type="button" className="task-filter-chip" data-filter={item.id} aria-pressed={category === item.id} title={item.id === 'all' ? '全部未完成事项' : item.label} onClick={() => setCategory(item.id)}>{item.label}<small>{counts[item.id]}</small></button>)}</div><select aria-label="筛选待办来源" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">全部来源</option><option value="ticktick">TickTick</option><option value="microsoft-todo">Microsoft To Do</option><option value="ical">日历订阅</option></select></div>
+    <summary><ListTodo size={14} />待办 <span>{pendingCount}</span><ChevronDown size={13} className="imported-tasks-chevron" /></summary>
+    <div className="imported-tasks-toolbar"><div className="task-filter-chips" role="group" aria-label="筛选待办状态">{categories.slice(0, 3).map(item => <button key={item.id} type="button" className="task-filter-chip" data-filter={item.id} aria-pressed={category === item.id} title={item.id === 'all' ? '全部未完成事项' : item.label} onClick={() => setCategory(item.id)}>{item.label}<small>{counts[item.id]}</small></button>)}<select className="task-more-filter" aria-label="更多待办筛选" value={categories.slice(3).some(item => item.id === category) ? category : ''} onChange={event => setCategory(event.target.value as Category)}><option value="" disabled>更多</option>{categories.slice(3).map(item => <option key={item.id} value={item.id}>{item.label} {counts[item.id]}</option>)}</select></div><select aria-label="筛选待办来源" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">全部来源</option><option value="ticktick">TickTick</option><option value="microsoft-todo">Microsoft To Do</option><option value="ical">日历订阅</option></select></div>
     <div ref={list} className="imported-task-list">{visible.map(renderTask)}{!visible.length && <p className="imported-tasks-empty">{categories.find(item => item.id === category)?.empty}</p>}</div>
   </details>
 }

@@ -126,6 +126,10 @@ export class FocusWindow {
       resizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, autoHideMenuBar: true,
       webPreferences: { preload: this.preload, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } })
     this.window = window
+    if (process.platform === 'darwin') {
+      window.setAlwaysOnTop(true, 'floating')
+      window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    }
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.webContents.on('will-navigate', event => event.preventDefault())
     window.on('page-title-updated', event => event.preventDefault())

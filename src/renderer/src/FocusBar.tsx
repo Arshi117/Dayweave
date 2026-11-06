@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
-import { AlertCircle, ArrowLeft, ArrowUpRight, CalendarDays, Check, Clock3, ListTodo, Palette, Plus, RefreshCw, Settings2, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowUpRight, CalendarDays, Check, ChevronDown, Clock3, ListTodo, Palette, Plus, RefreshCw, Settings2, X } from 'lucide-react'
 import { extendFocus, focusView, localFocusEvents, type CalendarRange, type FocusSession, type SubscriptionSnapshot } from '../../shared/focus'
 import { DEFAULT_FOCUS_DIMENSIONS, FOCUS_WIDTH, type FocusPlacement } from '../../shared/focus-window-layout'
 import type { PlannerEntry } from './types'
@@ -62,6 +62,7 @@ export function FocusBar() {
   const [syncOpen, setSyncOpen] = useState(false)
   const [connectionTarget, setConnectionTarget] = useState('home')
   const hints = useFirstUseHints()
+  const [completionHint, setCompletionHint] = useState(false)
   const activeFeed = useMemo(() => combinedImports(google, feed, ticktick, microsoft, links.sources), [google, feed, ticktick, microsoft, links.sources])
   const [feedLoaded, setFeedLoaded] = useState(false)
   const [settings, setSettings] = useState(false)
@@ -196,7 +197,10 @@ export function FocusBar() {
     const next = { ...readTaskCompletion() }
     if (done) next[id] = Date.now()
     else delete next[id]
-    if (persist(TASK_COMPLETION_KEY, next)) setTaskCompletion(next)
+    if (persist(TASK_COMPLETION_KEY, next)) {
+      setTaskCompletion(next)
+      if (done && !hints.seen.completion) setCompletionHint(true)
+    }
   }
   function toggleSettings() {
     setExpanded(true)
@@ -246,7 +250,6 @@ export function FocusBar() {
   const timerValue = minutes >= 60 ? Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0') : String(minutes)
   const seconds = Math.max(0, Math.ceil((view.end - now) / 1000))
   const digitalTime = (seconds >= 3600 ? Math.floor(seconds / 3600) + ':' : '') + String(Math.floor(seconds / 60) % 60).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0')
-  const stateLabel = view.current ? '正在进行' : selectedTask ? '待办事项' : '下一项安排'
   const problem = error || activeFeed.error
   return <main ref={shell} data-appearance={appearance} style={{ '--focus-details-max': Math.max(120, placement.availableHeight - 64) + 'px', '--focus-sidebar-width': Math.max(FOCUS_WIDTH, dimensions.stripWidth) - 12 + 'px' } as CSSProperties} className={'focus-shell' + (expanded ? ' is-expanded' : '') + (settings || appearanceOpen ? ' is-settings' : '') + (calendar ? ' has-calendar' : '') + (placement.left ? ' calendar-left' : '') + (placement.above ? ' opens-above' : '')}
     onKeyDown={event => {
@@ -283,28 +286,29 @@ export function FocusBar() {
         </div>
       </header>
       {syncOpen && <SyncStatus sources={syncSources} now={now} onManage={openConnections} />}
+      {completionHint && !hints.seen.completion && <FirstUseHint kind="completion" onDismiss={() => { hints.dismiss('completion'); setCompletionHint(false) }} />}
       {appearanceOpen ? <AppearancePicker value={appearance} onChange={changeAppearance} /> : settings ? <div className="focus-settings">
         <ImportConnections key={connectionTarget} initialView={connectionTarget} google={google} feed={feed} ticktick={ticktick} microsoft={microsoft} links={links}
           onGoogle={setGoogle} onFeed={setFeed} onTickTick={setTickTick} onMicrosoft={setMicrosoft} onLinks={setLinks} />
       </div> : <>
         <div className="focus-main">
           {view.current ? <div className="focus-session">
-            <div className="focus-session-copy"><span className="focus-eyebrow"><i />{stateLabel}</span><h2 title={view.current.title}>{view.current.title}</h2><p><Clock3 size={10} />{time(view.current.start)} — {time(view.end)}{session?.extendedUntil ? ' · 已延长' : ''}</p></div>
+            <div className="focus-session-copy"><h2 title={view.current.title}>{view.current.title}</h2><p><Clock3 size={12} />{time(view.current.start)} — {time(view.end)}{session?.extendedUntil ? ' · 已延长' : ''}</p></div>
             <div className="focus-session-timer" aria-label={'剩余 ' + duration(view.end - now)}>
               {appearance === 'graphite' && <svg className="focus-timer-ring" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="37" /><circle cx="42" cy="42" r="37" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - view.progress * 100} /></svg>}
-              <strong>{appearance === 'silver' ? digitalTime : timerValue}</strong><span>还剩 · {appearance === 'silver' ? seconds >= 3600 ? '时:分:秒' : '分:秒' : minutes >= 60 ? '时:分' : '分钟'}</span>
+              <strong>{appearance === 'silver' ? digitalTime : timerValue}</strong><span>{appearance === 'silver' || minutes >= 60 ? '剩余时间' : '剩余分钟'}</span>
             </div>
           </div> : selectedTask ? <div className="focus-session is-task"><div className="focus-session-copy"><span className="focus-eyebrow"><i />待办事项</span><h2 title={selectedTask.title}>{selectedTask.title}</h2><p>{taskDeadline(selectedTask, today)}</p></div><label className="focus-selected-task-complete" title="仅在 Dayweave 标记完成，不会更改原应用"><input className="task-completion-checkbox" type="checkbox" checked={false} aria-label={'完成待办：' + selectedTask.title} onChange={event => toggleTaskCompletion(selectedTask.id, event.target.checked)} /><span>完成</span></label></div>
             : view.next ? <div className="focus-session is-upcoming"><div className="focus-session-copy"><span className="focus-eyebrow"><i />下一项安排</span><h2 title={view.next.title}>{view.next.title}</h2><p>{nextDate}{time(view.next.start)} 开始</p></div><span className="focus-session-symbol"><ArrowUpRight size={20} strokeWidth={1.5} /></span></div>
               : <div className="focus-rest"><span className="focus-session-symbol"><CalendarDays size={20} strokeWidth={1.5} /></span><div><h2>当前没有安排</h2><p>连接日历，或为今天添加一项安排。</p></div></div>}
-          {view.concurrent.length > 0 && <div className="focus-concurrent" aria-label="其他正在进行的安排"><span>同时进行</span><div>{view.concurrent.map(event => <div key={event.id} title={event.title + '\n' + time(event.start) + ' — ' + time(event.end)}><strong>{event.title}</strong><small>{time(event.start)} — {time(event.end)}</small></div>)}</div></div>}
-          {view.current && <div className={'focus-next' + (!view.next ? ' is-empty' : '')} title={nextLabel}><span><ArrowUpRight size={11} />下一项</span><strong>{nextLabel}</strong></div>}
+          {view.concurrent.length > 0 && <details className="focus-concurrent" aria-label="其他正在进行的安排"><summary>同时进行 {view.concurrent.length} 项<ChevronDown size={13} /></summary><div>{view.concurrent.map(event => <div key={event.id} title={event.title + '\n' + time(event.start) + ' — ' + time(event.end)}><strong>{event.title}</strong><small>{time(event.start)} — {time(event.end)}</small></div>)}</div></details>}
+          {view.current && view.next && <div className="focus-next" title={nextLabel}><span><ArrowUpRight size={11} />下一项</span><strong>{nextLabel}</strong></div>}
           {!view.current && <FocusTasks tasks={tasks} selectedId={selectedTask?.id} today={today} onSelect={selectTask} onComplete={id => toggleTaskCompletion(id, true)} />}
           {upcomingConflicts.length > 0 && <div className="focus-conflict" role="status" title={focusNote}>{focusNote}</div>}
         </div>
         {view.current && <footer className="focus-actions">
           <button onClick={complete} title="只在 Dayweave 标记完成"><Check size={13} />完成</button>
-          <button title="继续 15 分钟" onClick={() => view.current && changeSession(extendFocus(view.current, view.end, Date.now()))}><Plus size={13} />延长 15 分钟</button>
+          <button title="延长 15 分钟" onClick={() => view.current && changeSession(extendFocus(view.current, view.end, Date.now()))}><Plus size={13} />15 分钟</button>
         </footer>}
       </>}
       {error && <div className="focus-error" role="alert">{error}</div>}

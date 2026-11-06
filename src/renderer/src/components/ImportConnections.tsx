@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Check, ChevronRight, Link2, RefreshCw, Settings2 } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, Link2, RefreshCw } from 'lucide-react'
 import type { CalendarSource, SubscriptionSnapshot } from '../../../shared/focus'
 import type { GoogleCalendarState } from '../../../shared/google-calendar'
 import type { MicrosoftTodoState } from '../../../shared/imports'
@@ -35,9 +35,9 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
   const connected = rows.filter(row => row.active).length
   const busy = pending || google.authorizing || microsoft.authorizing
   const authorizing = google.authorizing || microsoft.authorizing
-  const hint = detected ? detected.mode === 'feed' ? '已识别：' + detected.label + ' · 将读取订阅内容'
-    : detected.provider === 'ticktick' ? '已识别 TickTick 页面，请复制“订阅到其他日历”的链接'
-      : '已识别：' + detected.label + ' · 需要账号授权读取' : address.trim() ? '请输入完整的 HTTPS 或 webcal 链接' : '自动识别来源，已有安排会保留。'
+  const hint = detected ? detected.mode === 'feed' ? detected.label
+    : detected.provider === 'ticktick' ? '请使用 TickTick 的日历订阅链接'
+      : detected.label + ' · 需要授权' : address.trim() ? '请输入完整的 HTTPS 或 webcal 链接' : ''
   async function connect() {
     const api = window.focusControls
     if (!api || busy || !detected) return
@@ -110,18 +110,18 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
   const row = rows.find(row => row.id === view)
   return <section className="import-connections" aria-label="统一导入">
     {view === 'home' ? <>
-      <div className="unified-import-title"><Link2 size={15} /><strong>添加日程来源</strong></div>
+      <div className="unified-import-title"><Link2 size={15} /><strong>连接日历与待办</strong></div>
       <form onSubmit={event => { event.preventDefault(); void connect() }}>
-        <label className="unified-link-label" htmlFor="import-address">粘贴日历或待办链接</label>
-        <div className="unified-import-input"><input id="import-address" type="password" autoComplete="off" spellCheck={false} disabled={busy} placeholder="粘贴链接，自动识别来源" value={address}
+        <label className="visually-hidden" htmlFor="import-address">日历或待办订阅链接</label>
+        <div className="unified-import-input"><input id="import-address" type="password" autoComplete="off" spellCheck={false} disabled={busy} placeholder="粘贴日历或待办链接" value={address}
           onChange={event => { setAddress(event.target.value); setError(''); setMessage(''); setSetup(null); if (links.error) onLinks({ ...links, error: '' }) }} /><button type="submit" disabled={!detected || busy}>{pending ? '连接中' : '添加'}</button></div>
       </form>
-      <p className="unified-import-hint" role="status">{hint}</p>
+      <p className="unified-import-hint" role="status" hidden={!hint}>{hint}</p>
       {authorizing && <div className="google-auth-wait"><span>请在浏览器中完成账号授权…</span><button onClick={() => { void (google.authorizing ? window.focusControls?.cancelGoogle() : window.focusControls?.cancelMicrosoft()) }}>取消</button></div>}
       {message && <p className="unified-import-success" role="status"><Check size={12} />{message}</p>}
       {setup && <button className="unified-text-button" onClick={() => navigate(setup)}>打开连接设置</button>}
       <button className="unified-import-summary" disabled={busy} onClick={() => navigate('manage')}><span><i className={connected ? 'is-connected' : ''} />{connected ? '已连接 ' + connected + ' 个来源' : '尚未连接来源'}</span><span>管理<ChevronRight size={12} /></span></button>
-      <details className="unified-more"><summary>更多连接方式</summary><p>没有订阅链接时，可以直接连接账号。</p><div><button disabled={busy} onClick={() => navigate('google')}>Google 账号</button><button disabled={busy} onClick={() => navigate('microsoft')}>微软账号</button></div></details>
+      <details className="unified-more"><summary>通过账号连接</summary><div><button disabled={busy} onClick={() => navigate('google')}>Google 账号</button><button disabled={busy} onClick={() => navigate('microsoft')}>微软账号</button></div></details>
     </> : <>
       <button className="unified-import-back" disabled={busy} onClick={() => navigate(view === 'manage' ? 'home' : 'manage')}><ArrowLeft size={12} />{view === 'manage' ? '返回添加来源' : '返回来源管理'}</button>
       {view === 'manage' ? <div className="unified-source-list">
@@ -143,6 +143,5 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
       </div> : <p>该来源已移除。</p>}
     </>}
     {(error || links.error) && <p className="google-connection-error" role="alert">{error || links.error}</p>}
-    {view === 'home' && <p className="unified-import-note"><Settings2 size={10} />自动更新，只读取已获准访问的内容。</p>}
   </section>
 }

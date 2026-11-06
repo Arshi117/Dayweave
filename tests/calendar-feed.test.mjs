@@ -9,16 +9,19 @@ test('subscription addresses accept HTTPS and webcal, reject other schemes and e
   assert.equal(subscriptionURL('webcal://example.com/feed.ics').href,'https://example.com/feed.ics')
   for (const url of ['file:///secret','http://example.com','javascript:alert(1)','https://user:password@example.com/']) assert.throws(()=>subscriptionURL(url))
 })
-test('UTC events have stable identifiers; all-day and cancelled events do not become timed tasks', async () => {
+test('UTC and all-day events are preserved with stable identifiers; cancellations are omitted', async () => {
   const text=calendar([
     event(['UID:a','DTSTART:20261024T090000Z','DTEND:20261024T100000Z','SUMMARY:Study']),
     event(['UID:b','DTSTART;VALUE=DATE:20261024','DTEND;VALUE=DATE:20261025','SUMMARY:Holiday']),
     event(['UID:c','DTSTART:20261024T120000Z','DTEND:20261024T130000Z','STATUS:CANCELLED'])
   ].join('\r\n'))
   const result=await parseSubscription(text,now)
-  assert.equal(result.length,1)
-  assert.equal(result[0].start,Date.parse('2026-10-24T09:00:00Z'))
-  assert.equal(result[0].id,(await parseSubscription(text,now))[0].id)
+  assert.equal(result.length,2)
+  const study = result.find(item=>item.title==='Study')
+  const holiday = result.find(item=>item.title==='Holiday')
+  assert.equal(study.start,Date.parse('2026-10-24T09:00:00Z'))
+  assert.equal(holiday.allDay,true)
+  assert.equal(study.id,(await parseSubscription(text,now)).find(item=>item.title==='Study').id)
 })
 test('recurrence exceptions and moved instances are honored',async()=>{
   const text=calendar([

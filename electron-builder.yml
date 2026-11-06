@@ -1,0 +1,49 @@
+appId: Dayweave.Desktop
+productName: Dayweave
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
+  - build/desktop-clients.json
+  - THIRD_PARTY_NOTICES.md
+  - package.json
+asar: true
+npmRebuild: false
+electronLanguages: [en-US, zh-CN]
+win:
+  executableName: Dayweave
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  artifactName: Dayweave-Setup-${version}-${arch}.${ext}
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Dayweave
+  uninstallDisplayName: Dayweave
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  installerLanguages: [zh_CN, en_US]
+  language: 2052
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.png
+  identity: '-'
+  hardenedRuntime: false
+  notarize: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  artifactName: Dayweave-${version}-mac-${arch}.${ext}
+  target:
+    - target: zip
+      arch: [arm64, x64]
+publish: null
+

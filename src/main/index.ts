@@ -23,7 +23,20 @@ function createTray() {
     pixels[offset + 2] = progress ? 181 : 56
     pixels[offset + 3] = 255
   }
-  tray = new Tray(nativeImage.createFromBitmap(pixels, { width: size, height: size }))
+  let image = nativeImage.createFromBitmap(pixels, { width: size, height: size })
+  if (process.platform === 'darwin') {
+    const side = 36, template = Buffer.alloc(side * side * 4)
+    const lines = [[7, 8, 7, 28], [7, 28, 15, 19], [15, 19, 22, 28], [22, 28, 29, 8], [7, 14, 29, 14]]
+    for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) {
+      if (lines.some(([ax, ay, bx, by]) => {
+        const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)))
+        return Math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay)) < 1.8
+      })) template[(y * side + x) * 4 + 3] = 255
+    }
+    image = nativeImage.createFromBitmap(template, { width: side, height: side, scaleFactor: 2 })
+    image.setTemplateImage(true)
+  }
+  tray = new Tray(image)
   tray.setToolTip('Dayweave · 当前安排')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '显示／隐藏悬浮条', click: () => focus?.toggle() },
@@ -32,7 +45,7 @@ function createTray() {
     { type: 'separator' },
     { label: '退出 Dayweave', click: () => app.quit() },
   ]))
-  tray.on('click', () => focus?.toggle())
+  if (process.platform !== 'darwin') tray.on('click', () => focus?.toggle())
   tray.on('double-click', () => focus?.openCalendar())
 }
 
@@ -41,6 +54,10 @@ else {
   app.on('second-instance', () => focus?.show())
   app.whenReady().then(async () => {
     if (process.platform === 'win32') app.setAppUserModelId('Dayweave.Desktop')
+    if (process.platform === 'darwin') {
+      Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]))
+      app.dock?.hide()
+    }
     focus = new FocusWindow(app.getPath('userData'), join(__dirname, '../preload/index.js'))
     createTray()
     await focus.create()
