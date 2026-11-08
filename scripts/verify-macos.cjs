@@ -1,7 +1,7 @@
 const { app, screen } = require('electron')
 const { mkdtempSync } = require('node:fs')
 const { tmpdir } = require('node:os')
-const { join } = require('node:path')
+const { join, resolve } = require('node:path')
 const assert = require('node:assert/strict')
 console.log('macOS smoke: bootstrap')
 assert.equal(process.platform,'darwin')
@@ -23,6 +23,7 @@ app.on('browser-window-created',(_,win)=>{
     try{
       await wait('Boolean(window.focusControls && document.querySelector(".focus-pill"))')
       assert.equal(await evaluate('Boolean(document.querySelector(".focus-shell.is-docked"))'),false)
+      await wait('Promise.all([window.focusControls.getGoogle(),window.focusControls.getMicrosoft()]).then(([g,m])=>Boolean(g?.configured && m?.configured))')
       const google=await evaluate('window.focusControls.getGoogle()')
       const microsoft=await evaluate('window.focusControls.getMicrosoft()')
       assert.equal(google.configured,true);assert.equal(google.connected,false)
@@ -40,4 +41,5 @@ app.on('browser-window-created',(_,win)=>{
     }catch(error){console.error(error);clearTimeout(timeout);app.exit(1)}
   })
 })
-require(join(process.env.DAYWEAVE_TEST_APP_ROOT,'out/main/index.js'))
+try { require(resolve(process.env.DAYWEAVE_TEST_APP_ROOT,'out/main/index.js')) }
+catch(error) { console.error(error);clearTimeout(timeout);app.exit(1) }
