@@ -74,6 +74,7 @@
     if(event.source!==parent||event.origin!==location.origin||event.data?.channel!=='dayweave-demo-host')return;
     const {type,...data}=event.data;
     if(type==='placement'){placement=data.placement;emit('placement',placement)}
+    if(type==='collapse')document.querySelector('[aria-label="收起面板"]')?.click();
     if(type==='experience'){
       const name=data.name;
       const close=document.querySelector('[aria-label="收起面板"]');close?.click();
@@ -82,6 +83,7 @@
       // React handles every visible control; this bridge only selects an entry
       // point in the unchanged product, like Electron's tray commands.
       requestAnimationFrame(()=>{
+        if(name==='compact')return;
         if(name==='calendar')emit('calendar');
         else if(name==='connections')emit('settings');
         else{
