@@ -1,12 +1,18 @@
 const { app, screen } = require('electron')
-const { mkdtempSync } = require('node:fs')
+const { mkdtempSync, readFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const { join, resolve } = require('node:path')
 const assert = require('node:assert/strict')
 console.log('macOS smoke: bootstrap')
-assert.equal(process.platform,'darwin')
+assert.equal(process.platform,process.env.EXPECTED_PLATFORM || 'darwin')
 assert.equal(process.arch,process.env.EXPECTED_ARCH)
 assert.ok(process.env.DAYWEAVE_TEST_APP_ROOT)
+const applicationRoot = resolve(process.env.DAYWEAVE_TEST_APP_ROOT)
+// The harness runs under the development Electron binary. Match the packaged
+// bootstrap's app path so bundled registration is read from the actual ASAR.
+const metadata = JSON.parse(readFileSync(join(applicationRoot,'package.json'),'utf8'))
+assert.equal(metadata.version,require('../package.json').version)
+app.getAppPath = () => applicationRoot
 app.commandLine.appendSwitch('user-data-dir',mkdtempSync(join(tmpdir(),'dayweave-mac-smoke-')))
 const timeout=setTimeout(()=>{console.error('macOS smoke timed out');app.exit(1)},30000)
 app.on('ready',()=>console.log('macOS smoke: app ready'))
@@ -22,7 +28,7 @@ app.on('browser-window-created',(_,win)=>{
     const wait=async predicate=>{const until=Date.now()+10000;while(Date.now()<until){if(await evaluate(predicate))return;await new Promise(r=>setTimeout(r,50))}throw Error('macOS renderer check timed out')}
     try{
       await wait('Boolean(window.focusControls && document.querySelector(".focus-pill"))')
-      assert.equal(await evaluate('Boolean(document.querySelector(".focus-shell.is-docked"))'),false)
+      assert.equal(await evaluate('Boolean(document.querySelector(".focus-shell.is-docked"))'),process.platform === 'win32')
       await wait('Promise.all([window.focusControls.getGoogle(),window.focusControls.getMicrosoft()]).then(([g,m])=>Boolean(g?.configured && m?.configured))')
       const google=await evaluate('window.focusControls.getGoogle()')
       const microsoft=await evaluate('window.focusControls.getMicrosoft()')
@@ -36,10 +42,11 @@ app.on('browser-window-created',(_,win)=>{
       const b=win.getContentBounds(), area=screen.getDisplayMatching(b).workArea
       assert.ok(b.x>=area.x-1 && b.y>=area.y-1)
       assert.ok(b.x+b.width<=area.x+area.width+1)
+      await new Promise(r=>setTimeout(r,250))
       console.log(JSON.stringify({passed:true,platform:process.platform,architecture:process.arch,checks:['packaged renderer launches','native preload bridge','empty isolated profile','public account registration','floating strip expansion','calendar drawer','screen bounds']}))
       clearTimeout(timeout);app.exit(0)
     }catch(error){console.error(error);clearTimeout(timeout);app.exit(1)}
   })
 })
-try { require(resolve(process.env.DAYWEAVE_TEST_APP_ROOT,'out/main/index.js')) }
+try { require(join(applicationRoot,'out/main/index.js')) }
 catch(error) { console.error(error);clearTimeout(timeout);app.exit(1) }
