@@ -2,14 +2,14 @@
 (() => {
   const send = (type, value = {}) => parent.postMessage({ channel: 'dayweave-product-demo', type, ...value }, location.origin);
   const subscribers = new Map();
-  const subscribe = name => fn => { if (!subscribers.has(name)) subscribers.set(name, new Set()); subscribers.get(name).add(fn); if (name === 'placement') queueMicrotask(() => fn(placement)); return () => subscribers.get(name).delete(fn); };
+  const subscribe = name => fn => { if (!subscribers.has(name)) subscribers.set(name, new Set()); subscribers.get(name).add(fn); if (name === 'placement') queueMicrotask(() => {fn(placement);send('ready');}); return () => subscribers.get(name).delete(fn); };
   const emit = (name, value) => subscribers.get(name)?.forEach(fn => fn(value));
-  let placement = { above: false, left: false, availableHeight: 700, dimensions: { stripWidth: 300, calendarWidth: 760, calendarHeight: 620 } };
+  let placement = { above: false, docked:false, left: false, availableHeight: 710, dimensions: { stripWidth: 348, calendarWidth: 710, calendarHeight: 560 } };
   const emptyFeed = { configured: false, sourceLabel: '', events: [], tasks: [], lastSynced: null, refreshing: false, error: '' };
   const google = { configured: true, connected: false, authorizing: false, refreshing: false, reconnectRequired: false, calendars: [], events: [], lastSynced: null, error: '' };
   const microsoft = { configured: true, connected: true, authorizing: false, refreshing: false, reconnectRequired: false, lists: [{id:'demo',name:'示例清单',selected:true}], tasks: [], lastSynced: Date.now(), error: '' };
   const links = { sources: [], error: '' };
-  const denied = '网页演示不连接真实账号，请在 Windows 应用中操作。';
+  const denied = '请在客户端连接真实来源。';
   const day = new Date(), today = [day.getFullYear(),String(day.getMonth()+1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')].join('-');
   let range, latestPointer = {x:0,y:0};
   const feed = { ...emptyFeed };
@@ -33,9 +33,19 @@
     source:'subscription',provider:'google',calendarId:'demo-study',calendarName:'学习安排（示例）',
     description:'用于网页演示的 Google 日历示例安排，不来自真实账号。'
   }));
+  google.events.unshift({id:'google:demo-current',title:'专心做一会儿',start:now-10*60_000,end:now+35*60_000,source:'subscription',provider:'google',calendarId:'demo-study',calendarName:'学习安排（示例）'});
+  // Put more than one day on the current week, including Sunday, without
+  // relying on a fixed recording date or a visitor's time zone.
+  for(let offset=-2;offset<=2;offset++){
+    if(offset===0)continue;
+    const start=new Date(day);start.setDate(day.getDate()+offset);start.setHours(offset>0?10:14,0,0,0);
+    google.events.push({id:'google:demo-week-'+offset,title:offset>0?'阅读与整理':'小组讨论',start:start.getTime(),end:start.getTime()+60*60_000,source:'subscription',provider:'google',calendarId:'demo-study',calendarName:'学习安排（示例）'});
+  }
+  const originalEvents=cloneEvents();
+  function cloneEvents(){return structuredClone(google.events);}
   // Only demo-owned keys on the website origin are reset; no desktop data exists here.
   for (const key of ['dayweave.entries.v1','dayweave.focus.session.v1','dayweave.focus.completed.v1','dayweave.focus.task.v1','dayweave.tasks.completed.v1']) localStorage.removeItem(key);
-  localStorage.setItem('dayweave.appearance.v1',JSON.stringify('silver'));
+  if(!localStorage.getItem('dayweave.appearance.v1'))localStorage.setItem('dayweave.appearance.v1',JSON.stringify('silver'));
   localStorage.setItem('dayweave.hints.seen.v1',JSON.stringify({move:true,pull:true,split:true}));
   const clone = value => structuredClone(value);
   const rejectGoogle = async () => ({...google,error:denied});
@@ -55,7 +65,8 @@
     getGoogle:async()=>clone(google),configureGoogle:rejectGoogle,connectGoogle:rejectGoogle,cancelGoogle:async()=>clone(google),refreshGoogle:async()=>{google.lastSynced=Date.now();return clone(google)},disconnectGoogle:async()=>{google.connected=false;google.events=[];emit('google',clone(google));return clone(google)},selectGoogleCalendars:async()=>clone(google),setGoogleRange:async value=>{google.range=value;return clone(google)},openGoogleEvent:async()=>false,onGoogle:subscribe('google'),
     getMicrosoft:async()=>clone(microsoft),configureMicrosoft:rejectMicrosoft,connectMicrosoft:rejectMicrosoft,cancelMicrosoft:async()=>clone(microsoft),refreshMicrosoft:async()=>clone(microsoft),disconnectMicrosoft:async()=>{microsoft.connected=false;microsoft.tasks=[];emit('microsoft',clone(microsoft));return clone(microsoft)},selectMicrosoftLists:async()=>clone(microsoft),onMicrosoft:subscribe('microsoft'),
     getTickTick:async()=>clone(emptyFeed),saveTickTick:async()=>({...emptyFeed,error:denied}),refreshTickTick:async()=>clone(emptyFeed),removeTickTick:async()=>clone(emptyFeed),setTickTickRange:async()=>clone(emptyFeed),onTickTick:subscribe('ticktick'),
-    getCalendarLinks:async()=>clone(links),addCalendarLink:async()=>({...links,error:denied}),refreshCalendarLink:async()=>clone(links),removeCalendarLink:async()=>clone(links),setCalendarLinksRange:async()=>clone(links),onCalendarLinks:subscribe('links'),onSubscription:subscribe('subscription')
+    getCalendarLinks:async()=>clone(links),addCalendarLink:async()=>({...links,error:denied}),refreshCalendarLink:async()=>clone(links),removeCalendarLink:async()=>clone(links),setCalendarLinksRange:async()=>clone(links),onCalendarLinks:subscribe('links'),onSubscription:subscribe('subscription'),
+    previewCalendarFile:async()=>({token:'',name:'',eventCount:0,taskCount:0,examples:[],warnings:[],error:denied}),commitCalendarFile:async()=>({...links,error:denied}),cancelCalendarFile:async()=>{}
   };
   addEventListener('pointerdown',event=>{latestPointer={x:event.screenX,y:event.screenY};},true);
   addEventListener('pointermove',event=>{latestPointer={x:event.screenX,y:event.screenY};},true);
@@ -63,6 +74,23 @@
     if(event.source!==parent||event.origin!==location.origin||event.data?.channel!=='dayweave-demo-host')return;
     const {type,...data}=event.data;
     if(type==='placement'){placement=data.placement;emit('placement',placement)}
+    if(type==='experience'){
+      const name=data.name;
+      const close=document.querySelector('[aria-label="收起面板"]');close?.click();
+      google.events=name==='tasks'?originalEvents.filter(item=>item.id!=='google:demo-current'):structuredClone(originalEvents);
+      emit('google',clone(google));
+      // React handles every visible control; this bridge only selects an entry
+      // point in the unchanged product, like Electron's tray commands.
+      requestAnimationFrame(()=>{
+        if(name==='calendar')emit('calendar');
+        else if(name==='connections')emit('settings');
+        else{
+          const handle=document.querySelector('.focus-pull-handle');
+          if(handle?.getAttribute('aria-expanded')!=='true')handle?.click();
+          if(name==='appearance')requestAnimationFrame(()=>document.querySelector('[aria-label="切换外观"]')?.click());
+        }
+      });
+    }
   });
   // Electron supplies whole-strip dragging natively. Only its host movement is
   // simulated here; no desktop component, stylesheet or event handler is replaced.
@@ -74,7 +102,6 @@
   addEventListener('pointermove',event=>{if(drag?.id===event.pointerId)send('drag-move',{x:event.screenX,y:event.screenY});});
   function finish(event){if(drag?.id!==event.pointerId)return;if(drag.pill.hasPointerCapture(event.pointerId))drag.pill.releasePointerCapture(event.pointerId);drag=null;send('drag-end');}
   addEventListener('pointerup',finish);addEventListener('pointercancel',finish);
-  send('ready');
 })();
 
 

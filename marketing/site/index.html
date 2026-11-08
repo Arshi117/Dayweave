@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <meta name="description" content="Dayweave，把日程和待办放在眼前的轻巧悬浮条。在网页里直接试用，再下载 Windows 或 Mac 版。">
+  <meta property="og:title" content="Dayweave · 把此刻，留在眼前。">
+  <meta property="og:description" content="一条轻巧的悬浮条，装下当下的安排。先在这里，亲手试一试。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://arshi117.github.io/Dayweave/">
+  <link rel="canonical" href="https://arshi117.github.io/Dayweave/">
+  <link rel="icon" href="assets/icon.png">
+  <link rel="stylesheet" href="style.css">
+  <title>Dayweave · 把此刻，留在眼前。</title>
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#" aria-label="Dayweave 首页"><img src="assets/icon.png" width="34" height="34" alt=""><span>Dayweave</span></a>
+    <nav aria-label="主导航"><a href="#try">在线试用</a><a href="#connect">连接来源</a><button class="nav-download" data-download>下载 <span aria-hidden="true">↗</span></button></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <a class="version-link" href="https://github.com/Arshi117/Dayweave/releases/tag/v0.1.2" target="_blank" rel="noopener noreferrer"><span class="live-dot"></span>0.1.2 已更新 <span aria-hidden="true">↗</span></a>
+      <h1 id="hero-title">把此刻，<br>留在眼前。</h1>
+      <p class="hero-description">日程、待办，一条就好。<br>少一点来回切换，多一点专心。</p>
+      <div class="hero-actions"><button class="button primary" data-download>下载 Dayweave <span aria-hidden="true">↗</span></button><a class="button quiet" href="#try">先试试看 <span aria-hidden="true">↓</span></a></div>
+      <p class="platform-note">Windows & macOS · 免费测试版</p>
+    </section>
+
+    <section class="try-section wrap" id="try" aria-labelledby="try-title">
+      <div class="section-top"><div><p class="eyebrow">不用安装，先用一下</p><h2 id="try-title">这里的小条，真的可以操作。</h2></div><button class="reset-button" id="reset-demo" aria-label="重置试用示例"><span aria-hidden="true">↻</span> 重来一次</button></div>
+      <div class="playground">
+        <div class="demo-tabs" role="group" aria-label="选择试用内容">
+          <button data-experience="focus" aria-pressed="true"><span aria-hidden="true">01</span> 当前安排</button>
+          <button data-experience="calendar" aria-pressed="false"><span aria-hidden="true">02</span> 一周日历</button>
+          <button data-experience="tasks" aria-pressed="false"><span aria-hidden="true">03</span> 待办清单</button>
+          <button data-experience="appearance" aria-pressed="false"><span aria-hidden="true">04</span> 换个外观</button>
+        </div>
+        <div class="demo-intro"><p id="experience-title">眼前这一件，慢慢做。</p><p id="experience-description">试着延长 15 分钟，或完成这项安排。</p></div>
+        <div class="app-preview" id="desktop" data-view="focus" aria-label="可交互的 Dayweave 试用区域">
+          <iframe id="product-demo" class="product-demo" src="product-demo/index.html?surface=focus" title="Dayweave 0.1.2 在线试用，使用示例日程" sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="same-origin"></iframe>
+          <div class="loading" id="demo-loading" role="status">正在准备小条…</div>
+        </div>
+        <div class="demo-bottom"><span><i class="live-dot"></i>真实 App 界面 · 示例数据</span><span>拖动小条移动 · 点击边缘横线收起 / 展开</span></div>
+      </div>
+      <p class="demo-note">可以新建安排、勾选待办、切换外观。账号连接、自动同步和桌面停靠请在客户端体验。</p>
+      <p class="demo-feedback" id="demo-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="essentials wrap" aria-labelledby="essential-title">
+      <div class="section-heading"><p class="eyebrow">刚刚好的存在感</p><h2 id="essential-title">需要时展开，<br>其余时候，轻轻陪着。</h2></div>
+      <div class="essential-list">
+        <article><span class="feature-symbol" aria-hidden="true">↗</span><h3>抬眼，就知道</h3><p>当前的安排和剩余时间，留在手边。<br>不用一次次打开完整日历。</p></article>
+        <article><span class="feature-symbol" aria-hidden="true">⊞</span><h3>拉开，看到一周</h3><p>日程和待办放在一起。<br>查看、调整，再回到眼前这一件。</p></article>
+        <article><span class="feature-symbol" aria-hidden="true">↔</span><h3>留一点空间给你</h3><p>位置、长度、外观，都能调。<br>Windows 还可以吸附在底部任务栏区域。</p></article>
+      </div>
+    </section>
+
+    <section class="connect-section" id="connect" aria-labelledby="connect-title"><div class="wrap connect-layout">
+      <div class="section-heading"><p class="eyebrow">沿用你的习惯</p><h2 id="connect-title">安排从哪里来，<br>都可以在这里相遇。</h2><p>继续用熟悉的工具。<br>Dayweave 帮你把当下的事，放到眼前。</p><button class="inline-button" id="try-connections">看看连接界面 <span aria-hidden="true">↗</span></button></div>
+      <dl class="connection-list">
+        <div><dt><span class="source-monogram google" aria-hidden="true">G</span>Google 日历</dt><dd>登录账号，选择日历</dd></div>
+        <div><dt><span class="source-monogram microsoft" aria-hidden="true">✓</span>Microsoft To Do</dt><dd>清单和截止日期，一起带来</dd></div>
+        <div><dt><span class="source-monogram link-icon" aria-hidden="true">↗</span>日历订阅链接</dt><dd>支持 ICS / iCal，包括 TickTick 订阅</dd></div>
+        <div><dt><span class="source-monogram file-icon" aria-hidden="true">↓</span>本地文件</dt><dd>ICS 直接导入，课表 PDF 识别后核对</dd></div>
+      </dl>
+    </div></section>
+
+    <section class="questions wrap" aria-labelledby="questions-title"><h2 id="questions-title">再了解一点。</h2><div>
+      <details><summary>网页里试的，就是 App 的样子吗？<span aria-hidden="true">+</span></summary><p>是的，这里使用 0.1.2 的实际界面和交互。日程与待办是示例数据，你的操作只影响当前网页试用。桌面置顶、底部停靠和真实账号连接需要下载客户端。</p></details>
+      <details><summary>没有 Google 或微软账号，也能用吗？<span aria-hidden="true">+</span></summary><p>可以。你可以手动添加安排、粘贴有效的 ICS / iCal 日历订阅链接，或导入 ICS 文件。支持的文本课表 PDF 可在识别、核对后生成日程；文件导入不会自动跟随源文件更新。</p></details>
+      <details><summary>Windows 和 Mac 都可以下载吗？<span aria-hidden="true">+</span></summary><p>可以。Windows 提供 64 位安装包，Mac 提供 Apple Silicon 和 Intel 两个版本。底部任务栏吸附目前仅适用于 Windows。当前仍为测试版，Windows 尚未签名，Mac 尚未经过 Apple 公证；安装说明见发布页。</p></details>
+    </div></section>
+
+    <section class="download-section wrap" id="download" aria-labelledby="download-title"><img src="assets/icon.png" width="64" height="64" alt=""><h2 id="download-title">留一小块地方，<br>给眼前这一件事。</h2><button class="button primary" data-download>下载 Dayweave <span aria-hidden="true">↗</span></button><p>0.1.2 Beta · Windows & macOS</p></section>
+  </main>
+  <footer class="site-footer wrap"><a class="brand" href="#"><img src="assets/icon.png" width="25" height="25" alt="">Dayweave</a><div><a href="https://github.com/Arshi117/Dayweave/releases/tag/v0.1.2" target="_blank" rel="noopener noreferrer">更新记录</a><a href="https://github.com/Arshi117/Dayweave" target="_blank" rel="noopener noreferrer">GitHub ↗</a><span>© 2026 Dayweave</span></div></footer>
+
+  <dialog id="download-dialog" aria-labelledby="download-dialog-title"><button class="dialog-close" aria-label="关闭下载窗口">×</button><p class="eyebrow">DAYWEAVE 0.1.2 BETA</p><h2 id="download-dialog-title">选一个适合你的版本。</h2><div class="downloads">
+    <a href="https://github.com/Arshi117/Dayweave/releases/download/v0.1.2/Dayweave-Setup-0.1.2-x64.exe"><span>Windows<small>64 位 · 安装程序</small></span><span aria-hidden="true">↓</span></a>
+    <a href="https://github.com/Arshi117/Dayweave/releases/download/v0.1.2/Dayweave-0.1.2-mac-arm64.zip"><span>Mac · Apple Silicon<small>M 系列芯片 · ZIP</small></span><span aria-hidden="true">↓</span></a>
+    <a href="https://github.com/Arshi117/Dayweave/releases/download/v0.1.2/Dayweave-0.1.2-mac-x64.zip"><span>Mac · Intel<small>Intel 芯片 · ZIP</small></span><span aria-hidden="true">↓</span></a>
+  </div><p class="download-note">Windows 尚未签名；Mac 使用 ad-hoc 签名，尚未经过 Apple 公证。</p><a class="inline-button" href="https://github.com/Arshi117/Dayweave/releases/tag/v0.1.2" target="_blank" rel="noopener noreferrer">安装说明与版本记录 <span aria-hidden="true">↗</span></a></dialog>
+  <script src="app.js" defer></script>
+</body>
+</html>
