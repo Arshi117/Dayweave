@@ -20,8 +20,10 @@ jobs:
         include:
           - runner: macos-15
             arch: arm64
+            macho: arm64
           - runner: macos-15-intel
             arch: x64
+            macho: x86_64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     steps:
@@ -52,14 +54,16 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npx electron-builder --mac zip --${{ matrix.arch }} --publish never
       - name: Validate bundle and launch with an isolated profile
+        timeout-minutes: 3
         env:
           EXPECTED_ARCH: ${{ matrix.arch }}
+          MACHO_ARCH: ${{ matrix.macho }}
         run: |
           APP_PATH=$(find release -maxdepth 2 -name Dayweave.app -print -quit)
           test -n "$APP_PATH"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          test "$(lipo -archs "$APP_PATH/Contents/MacOS/Dayweave")" = "$EXPECTED_ARCH"
-          DAYWEAVE_TEST_APP_ROOT="$APP_PATH/Contents/Resources/app.asar" npx electron scripts/verify-macos.cjs
+          test "$(lipo -archs "$APP_PATH/Contents/MacOS/Dayweave")" = "$MACHO_ARCH"
+          DAYWEAVE_TEST_APP_ROOT="$APP_PATH/Contents/Resources/app.asar" node scripts/run-macos-smoke.cjs
       - name: Generate checksum
         env:
           RELEASE_VERSION: ${{ inputs.version }}

@@ -3,17 +3,21 @@ const { mkdtempSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 const assert = require('node:assert/strict')
+console.log('macOS smoke: bootstrap')
 assert.equal(process.platform,'darwin')
 assert.equal(process.arch,process.env.EXPECTED_ARCH)
 assert.ok(process.env.DAYWEAVE_TEST_APP_ROOT)
 app.commandLine.appendSwitch('user-data-dir',mkdtempSync(join(tmpdir(),'dayweave-mac-smoke-')))
 const timeout=setTimeout(()=>{console.error('macOS smoke timed out');app.exit(1)},30000)
+app.on('ready',()=>console.log('macOS smoke: app ready'))
 let inspected=false
 app.on('browser-window-created',(_,win)=>{
   if(inspected)return
   inspected=true
+  console.log('macOS smoke: window created')
   win.setFocusable(false);win.setOpacity(0)
   win.webContents.once('did-finish-load',async()=>{
+    console.log('macOS smoke: renderer loaded')
     const evaluate=code=>win.webContents.executeJavaScript(code)
     const wait=async predicate=>{const until=Date.now()+10000;while(Date.now()<until){if(await evaluate(predicate))return;await new Promise(r=>setTimeout(r,50))}throw Error('macOS renderer check timed out')}
     try{
