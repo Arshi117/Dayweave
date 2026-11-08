@@ -1,12 +1,13 @@
 import { readFile, writeFile, rename } from 'node:fs/promises'
 import { join } from 'node:path'
-import { net, safeStorage } from 'electron'
+import { safeStorage } from 'electron'
 import { calendarMetadata, parseSubscription, subscriptionURL } from './calendar-feed'
 import { CalendarImportError, calendarErrorMessage } from './calendar-errors'
 import type { CalendarRange, CalendarSource, FocusEvent, SubscriptionSnapshot } from '../shared/focus'
 import type { ImportedTask } from '../shared/imports'
 import { parseCalendarTasks } from './task-feed'
 import { calendarSourceCounts } from './calendar-source'
+import { downloadCalendarResource } from './calendar-download'
 
 const sameRange = (a: CalendarRange | undefined, b: CalendarRange | undefined) => a?.from === b?.from && a?.to === b?.to
 export function validCalendarRange(value: unknown): value is CalendarRange {
@@ -17,33 +18,9 @@ export function validCalendarRange(value: unknown): value is CalendarRange {
 }
 
 async function downloadCalendar(initial: URL, signal: AbortSignal): Promise<string> {
-  let url = initial
-  for (let redirects = 0; redirects < 5; redirects++) {
-    // Chromium follows Windows proxy settings, including PAC configuration.
-    const response = await net.fetch(url.href, { signal, redirect: 'manual', credentials: 'omit', cache: 'no-store', headers: { Accept: 'text/calendar', 'User-Agent': 'Dayweave/0.1' } })
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get('location')
-      await response.body?.cancel()
-      if (!location) throw new CalendarImportError('redirect')
-      if (new URL(location, url).hostname === 'accounts.google.com') throw new CalendarImportError('html')
-      url = subscriptionURL(new URL(location, url).href)
-      continue
-    }
-    if (!response.ok || !response.body) { await response.body?.cancel(); throw new CalendarImportError('http', String(response.status)) }
-    const reader = response.body.getReader(), chunks: Uint8Array[] = []
-    let size = 0
-    try {
-      while (true) {
-        const chunk = await reader.read()
-        if (chunk.done) break
-        size += chunk.value.length
-        if (size > 8 * 1024 * 1024) throw new CalendarImportError('size')
-        chunks.push(chunk.value)
-      }
-    } catch (error) { await reader.cancel().catch(() => {}); throw error }
-    return Buffer.concat(chunks).toString('utf8')
-  }
-  throw new CalendarImportError('redirect')
+  const resource = await downloadCalendarResource(initial, signal)
+  if (resource.kind !== 'calendar') throw new CalendarImportError('format')
+  return resource.text
 }
 
 export class CalendarSubscription {
@@ -128,7 +105,7 @@ export class CalendarSubscription {
     if (this.snapshot.refreshing || !this.url) return this.snapshot
     return this.refresh(this.url, true)
   }
-  async refresh(address = this.url, reuseContent = false) {
+  async refresh(address = this.url, reuseContent = false, downloadedText?: string) {
     if (!address) return this.snapshot
     if (this.snapshot.refreshing) return this.snapshot
     let url: URL
@@ -144,7 +121,7 @@ export class CalendarSubscription {
     try {
       // Archive the complete downloaded calendar before creating display projections.
       const cached = reuseContent && url.href === this.url && Boolean(this.content)
-      const text = cached ? this.content : await downloadCalendar(url, controller.signal)
+      const text = downloadedText ?? (cached ? this.content : await downloadCalendar(url, controller.signal))
       if (!cached && text.includes('BEGIN:VCALENDAR') && text.includes('END:VCALENDAR')) await this.archiveSource(text, revision)
       const report = calendarSourceCounts(text)
       let warnings: string[]

@@ -1,11 +1,11 @@
-# Dayweave 0.1.1 macOS test build
+# Dayweave 0.1.2 macOS beta
 
 ## Choose a download
 
 Open Apple menu > About This Mac and check Chip or Processor.
 
-- Apple M-series chip: `release/Dayweave-0.1.1-mac-arm64.zip`
-- Intel processor: `release/Dayweave-0.1.1-mac-x64.zip`
+- Apple M-series chip: [Dayweave-0.1.2-mac-arm64.zip](https://github.com/Arshi117/Dayweave/releases/download/v0.1.2/Dayweave-0.1.2-mac-arm64.zip)
+- Intel processor: [Dayweave-0.1.2-mac-x64.zip](https://github.com/Arshi117/Dayweave/releases/download/v0.1.2/Dayweave-0.1.2-mac-x64.zip)
 
 Both builds require macOS 12 Monterey or later. Neither requires Node.js or npm.
 
@@ -25,11 +25,11 @@ Connect your own Google or Microsoft account, or paste a supported calendar subs
 
 The Mac profile is `~/Library/Application Support/dayweave-desktop`. It is independent of the developer's Windows profile. Removing the app does not erase that profile.
 
-## What has been checked
+## Build and validation
 
-The 0.1.1 source passes typechecking, the production build and its 21 existing tests. Both Mac bundles use official Electron 38.8.6 runtime downloads. Their executable architecture, executable permissions, framework symlinks, embedded compiled application, ad-hoc code-page hashes, application bundle seals and Electron JIT entitlements have been checked without running macOS.
+The release workflow builds arm64 and x64 packages on matching macOS runners. It runs typechecking, all 41 regression tests, native bundle signing verification, an executable architecture check and an isolated-profile launch of the packaged application. The smoke test checks the preload bridge, empty profile, application registration, expanded task strip and calendar drawer. Both bundles use Electron 38.8.6. Workflow logs identify the source commit and validation results.
 
-These packages carry local ad-hoc signatures, not an Apple Developer ID signature or Apple notarization. They are for a friend's initial test. They have not yet been launched on a physical Mac; actual window behavior, Keychain storage, browser authorization and sleep/wake behavior still need that test.
+These beta packages carry ad-hoc signatures, not an Apple Developer ID signature or Apple notarization. CI validation does not replace testing on a separate user's Mac: account consent, organization restrictions, Keychain prompts and sleep/wake behavior still need that test. Windows taskbar docking and its coexistence fix apply only to Windows; the Mac strip remains a floating menu-bar utility.
 
 If opening fails, report the Mac chip, macOS version and exact error message. Do not share subscription URLs, passwords, tokens or account configuration files.
 

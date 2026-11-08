@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AlertCircle, Check, RefreshCw } from 'lucide-react'
 export interface SyncSource {
-  id: string; name: string; lastSynced: number | null; refreshing: boolean; error: string; reconnectRequired?: boolean
+  id: string; name: string; lastSynced: number | null; refreshing: boolean; error: string; reconnectRequired?: boolean; file?: boolean
   retry: () => Promise<unknown>
 }
 export function syncedAgo(stamp: number | null, now: number) {
@@ -14,8 +14,10 @@ export function syncSummary(sources: SyncSource[], now: number) {
   if (sources.some(source => source.refreshing)) return '正在更新日程来源'
   if (failures) return failures + ' 个来源需要检查，点击查看'
   if (!sources.length) return '尚未连接日程来源'
-  const stamps = sources.map(source => source.lastSynced)
-  return stamps.some(stamp => !stamp) ? '部分来源尚未成功更新' : '全部来源 · ' + syncedAgo(Math.min(...stamps as number[]), now)
+  const online = sources.filter(source => !source.file)
+  if (!online.length) return sources.length + ' 个本地文件来源 · 不自动同步'
+  const stamps = online.map(source => source.lastSynced)
+  return stamps.some(stamp => !stamp) ? '部分来源尚未成功更新' : '在线来源 · ' + syncedAgo(Math.min(...stamps as number[]), now)
 }
 export function SyncStatus({ sources, now, onManage }: { sources: SyncSource[]; now: number; onManage: (id: string) => void }) {
   const [pending, setPending] = useState<string[]>([])
@@ -34,10 +36,10 @@ export function SyncStatus({ sources, now, onManage }: { sources: SyncSource[]; 
       const error = failures[source.id] || source.error
       return <article className={error || source.reconnectRequired ? 'sync-has-error' : ''} key={source.id}>
         <div className="sync-source-heading">{error || source.reconnectRequired ? <AlertCircle size={12} /> : busy ? <RefreshCw size={12} className="is-spinning" /> : <Check size={12} />}<strong title={source.name}>{source.name}</strong></div>
-        <small>{busy ? '更新中…' : syncedAgo(source.lastSynced, now)}</small>
+        <small>{source.file ? '本地文件 · 不自动同步' : busy ? '更新中…' : syncedAgo(source.lastSynced, now)}</small>
         {error && <p role="status">{error}</p>}
         {(error || source.reconnectRequired) && <small>{source.lastSynced ? '当前保留上次成功读取的内容。' : '此来源尚未成功读取内容。'}</small>}
-        <div className="sync-source-actions">{!source.reconnectRequired && <button disabled={busy} onClick={() => { void retry(source) }}>{busy ? '更新中' : error ? '重试' : '现在更新'}</button>}<button onClick={() => onManage(source.id)}>{source.reconnectRequired ? '重新连接' : error ? '检查连接' : '管理'}</button></div>
+        <div className="sync-source-actions">{!source.file && !source.reconnectRequired && <button disabled={busy} onClick={() => { void retry(source) }}>{busy ? '更新中' : error ? '重试' : '现在更新'}</button>}<button onClick={() => onManage(source.id)}>{source.file ? '管理 / 替换文件' : source.reconnectRequired ? '重新连接' : error ? '检查连接' : '管理'}</button></div>
       </article>
     })}
   </section>

@@ -17,7 +17,7 @@ export function useFirstUseHints() {
   return { seen, dismiss }
 }
 const messages: Record<HintKind, string> = {
-  move: '按住长条任意位置，就能拖动它。',
+  move: '按住小条任意位置，就能拖动它。',
   pull: '拉动细横线，或点击它，查看安排详情。',
   split: '上下拖动待办与日历之间的横线，调整两部分大小。',
   completion: '已在本机标记完成，可在日历的「更多 → 已完成」中恢复。原应用不会更改。',

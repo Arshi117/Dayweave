@@ -1,0 +1,4 @@
+html.dayweave-ui-preview, html.dayweave-ui-preview body { background: #eae7e1 !important; }
+html.dayweave-ui-preview body { display: flex; justify-content: flex-start; align-items: flex-start; min-width: 348px; padding: 70px 24px 32px; overflow: auto; }
+.dayweave-ui-preview #root { flex: 0 0 auto; width: 300px; height: auto; margin: 0 auto; }
+.dayweave-ui-preview::before { content: 'Dayweave 界面预览 · 示例数据 · 可点击查看各个页面'; position: fixed; top: 22px; left: 0; right: 0; text-align: center; color: #766d62; font: 12px 'Segoe UI', 'Microsoft YaHei UI', sans-serif; pointer-events: none; }

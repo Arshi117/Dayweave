@@ -18,9 +18,6 @@
 .focus-shell .task-drag-title > strong { min-width: 0; }
 .focus-shell .task-drop-preview { z-index: 5; pointer-events: none; outline: 1px dashed var(--dw-accent); background: var(--dw-hover); color: var(--dw-text); }
 .focus-shell .task-schedule-notice { margin: 0 0 15px; font-size: 11px; line-height: 1.6; color: var(--dw-muted); }
-.focus-shell .calendar-schedule-pane .drawer-empty-week { pointer-events: none; }
-.focus-shell .calendar-schedule-pane .drawer-empty-week button { pointer-events: auto; }
-.focus-shell .calendar-schedule-pane:has(.task-drop-preview) .drawer-empty-week { visibility: hidden; }
 .focus-shell .sync-status-trigger.has-error { color: var(--dw-warning); }
 .focus-shell .sync-status-panel { margin: 3px 10px 8px; padding: 10px; border: 1px solid var(--dw-line); border-radius: 10px; background: var(--dw-tint); max-height: 245px; overflow-y: auto; scrollbar-width: thin; }
 .focus-shell .sync-status-panel h3 { margin: 0 0 8px; color: var(--dw-text); font-size: 11px; font-weight: 500; }
@@ -46,7 +43,7 @@
 .focus-shell .focus-panel-label, .focus-shell .focus-eyebrow, .focus-shell .focus-task-picker-heading { font-size: 11px; letter-spacing: 0; }
 .focus-shell .focus-header-actions { gap: 3px; }
 .focus-shell .focus-header-actions button, .focus-shell .focus-details-header > button { width: 28px; height: 28px; }
-.focus-shell .focus-session p, .focus-shell .focus-rest p, .focus-shell .focus-session-timer span { font-size: 11px; }
+.focus-shell .focus-session p, .focus-shell .focus-rest p { font-size: 11px; }
 .focus-shell .focus-next > span, .focus-shell .focus-next > strong, .focus-shell .focus-concurrent small { font-size: 11px; }
 .focus-shell .focus-actions button { min-height: 36px; font-size: 12px; }
 .focus-shell .focus-task-item strong { font-size: 12px; }

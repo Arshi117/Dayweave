@@ -1,0 +1,42 @@
+const { app, screen } = require('electron')
+const { mkdtempSync, readFileSync } = require('node:fs')
+const { tmpdir } = require('node:os')
+const { join, resolve } = require('node:path')
+const assert = require('node:assert/strict')
+const directory = mkdtempSync(join(tmpdir(), 'dayweave-dock-'))
+app.commandLine.appendSwitch('user-data-dir', directory)
+const timeout = setTimeout(() => app.exit(1), 30000)
+app.on('browser-window-created', (_, win) => {
+  win.setFocusable(false); win.setIgnoreMouseEvents(true); win.setOpacity(0)
+  win.webContents.once('did-finish-load', async () => {
+    const evaluate = text => win.webContents.executeJavaScript(text)
+    const wait = async check => { const until = Date.now()+10000; while(Date.now()<until) { if(await check())return; await new Promise(r=>setTimeout(r,50)) } throw Error('Native dock check timed out') }
+    const docked = () => evaluate('Boolean(document.querySelector(".focus-shell.is-docked"))')
+    const expand = () => evaluate('document.querySelector(".focus-pull-handle").click()')
+    const move = async (x,y) => { win.emit('will-move', { preventDefault() {} }, {x,y,width:win.getBounds().width,height:win.getBounds().height}); win.setPosition(x,y); await new Promise(r=>setTimeout(r,100)); win.emit('moved') }
+    try {
+      await wait(docked)
+      const display = screen.getDisplayMatching(win.getBounds()), area = display.workArea
+      const dock = win.getContentBounds()
+      const reserved = display.bounds.y+display.bounds.height-(area.y+area.height)
+      if (reserved>0 && reserved<=120) assert.ok(dock.y+dock.height>area.y+area.height, 'native dock must occupy taskbar bounds')
+      assert.equal(win.isAlwaysOnTop(),true)
+      await expand(); await wait(()=>evaluate('Boolean(document.querySelector(".focus-details"))'))
+      assert.equal(await evaluate('document.querySelector(".focus-shell").classList.contains("opens-above")'),true)
+      await expand(); await wait(()=>evaluate('!document.querySelector(".focus-details")'))
+      await move(area.x+180,area.y+Math.round(area.height*.45))
+      await wait(async()=>!await docked())
+      assert.equal(JSON.parse(readFileSync(join(directory,'focus-window.json'),'utf8')).docked,false)
+      await expand(); await wait(()=>evaluate('Boolean(document.querySelector(".focus-details"))'))
+      assert.equal(await evaluate('document.querySelector(".focus-shell").classList.contains("opens-above")'),false)
+      await expand(); await wait(()=>evaluate('!document.querySelector(".focus-details")'))
+      await move(area.x+300,area.y+area.height-44)
+      await wait(docked)
+      assert.equal(JSON.parse(readFileSync(join(directory,'focus-window.json'),'utf8')).docked,true)
+      assert.ok(Math.abs(win.getContentBounds().x-(area.x+8))<=1)
+      console.log(JSON.stringify({passed:true,directory,checks:['native taskbar bounds','topmost dock','upward dock expansion','native drag detach','downward floating expansion','native bottom snap','persisted docking state'],display:display.bounds,workArea:area,dock:win.getContentBounds()}))
+      clearTimeout(timeout); app.exit(0)
+    } catch(error) { console.error(error); clearTimeout(timeout); app.exit(1) }
+  })
+})
+require(process.env.DAYWEAVE_TEST_APP_ROOT ? join(process.env.DAYWEAVE_TEST_APP_ROOT,'out/main/index.js') : resolve(__dirname,'../out/main/index.js'))

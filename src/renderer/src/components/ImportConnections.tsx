@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Check, ChevronRight, Link2, RefreshCw } from 'lucide-react'
-import type { CalendarSource, SubscriptionSnapshot } from '../../../shared/focus'
+import { useMemo, useState } from 'react'
+import { AlertCircle, ArrowLeft, Check, ChevronRight, FileUp, Link2, RefreshCw } from 'lucide-react'
+import type { SubscriptionSnapshot } from '../../../shared/focus'
 import type { GoogleCalendarState } from '../../../shared/google-calendar'
 import type { MicrosoftTodoState } from '../../../shared/imports'
-import { identifyImportLink, type CalendarLinksState } from '../../../shared/import-links'
+import { identifyImportLink, importLinkInputError, type CalendarLinksState } from '../../../shared/import-links'
 import { GoogleConnection } from './GoogleConnection'
 import { MicrosoftTodoConnection } from './TaskConnections'
+import { CalendarFileImport } from './CalendarFileImport'
 
 interface Props {
   initialView?: string
@@ -17,37 +18,40 @@ interface Props {
 export function ImportConnections({ initialView = 'home', google, feed, ticktick, microsoft, links, onGoogle, onFeed, onTickTick, onMicrosoft, onLinks }: Props) {
   const [address, setAddress] = useState(''), [pending, setPending] = useState(false)
   const [error, setError] = useState(''), [message, setMessage] = useState('')
+  const [invalidAddress, setInvalidAddress] = useState(false)
   const [view, setView] = useState(initialView)
-  const [setup, setSetup] = useState<'google' | 'microsoft' | null>(null)
-  const [sourceFile, setSourceFile] = useState<CalendarSource | null>(null)
-  const [sourcePending, setSourcePending] = useState(false)
-  const sourceRequest = useRef(0)
+  const [linkedPdf, setLinkedPdf] = useState<File | null>(null)
   const detected = useMemo(() => identifyImportLink(address), [address])
   const fallback = google.connected && /(^|\.)google\.com$/i.test(feed.sourceLabel)
   const rows = [
-    ...(google.connected ? [{ id: 'google', name: 'Google 日历', count: google.events.length, error: google.error, active: true }] : []),
-    ...(feed.configured ? [{ id: 'legacy', name: (feed.calendarName || '日历订阅') + (fallback ? '（备用）' : ''), count: feed.events.length, error: feed.error, active: !fallback }] : []),
-    ...(ticktick.configured ? [{ id: 'ticktick', name: ticktick.calendarName || 'TickTick', count: ticktick.events.length + (ticktick.tasks?.length || 0), error: ticktick.error, active: true }] : []),
-    ...(microsoft.connected ? [{ id: 'microsoft', name: 'Microsoft To Do', count: microsoft.tasks.length, error: microsoft.error, active: true }] : []),
+    ...(google.connected ? [{ id: 'google', name: 'Google 日历', error: google.error }] : []),
+    ...(feed.configured ? [{ id: 'legacy', name: (feed.calendarName || '日历订阅') + (fallback ? '（备用）' : ''), error: feed.error }] : []),
+    ...(ticktick.configured ? [{ id: 'ticktick', name: ticktick.calendarName || 'TickTick', error: ticktick.error }] : []),
+    ...(microsoft.connected ? [{ id: 'microsoft', name: 'Microsoft To Do', error: microsoft.error }] : []),
     ...links.sources.map(source => ({ id: source.id, name: source.snapshot.calendarName || (source.provider === 'ticktick' ? 'TickTick' : source.snapshot.sourceLabel),
-      count: source.snapshot.events.length + (source.snapshot.tasks?.length || 0), error: source.snapshot.error, active: source.snapshot.configured })),
+      error: source.snapshot.error })),
   ]
-  const connected = rows.filter(row => row.active).length
+  const connected = rows.length
   const busy = pending || google.authorizing || microsoft.authorizing
   const authorizing = google.authorizing || microsoft.authorizing
-  const hint = detected ? detected.mode === 'feed' ? detected.label
-    : detected.provider === 'ticktick' ? '请使用 TickTick 的日历订阅链接'
-      : detected.label + ' · 需要授权' : address.trim() ? '请输入完整的 HTTPS 或 webcal 链接' : ''
+  const visibleError = error || links.error
+  function validateAddress() {
+    const issue = importLinkInputError(address)
+    setInvalidAddress(Boolean(issue))
+    if (issue) { setError(issue); setMessage('') }
+    return !issue
+  }
   async function connect() {
     const api = window.focusControls
-    if (!api || busy || !detected) return
-    setError(''); setMessage(''); setSetup(null)
+    if (busy) return
+    if (!validateAddress() || !detected) return
+    if (!api) { setError('暂时无法连接，请重启 Dayweave 后重试。'); return }
+    setError(''); setMessage('')
     if (detected.provider === 'ticktick' && detected.mode === 'account') {
       setError('这是 TickTick 网页或分享链接。请在 TickTick 中复制“订阅到其他日历”的链接。'); return
     }
     if (detected.mode === 'account' && (detected.provider === 'google' && !google.configured || detected.provider === 'microsoft' && !microsoft.configured)) {
-      const provider = detected.provider === 'google' ? 'google' : 'microsoft'
-      setSetup(provider); setMessage('已识别来源，但此开发版尚未配置账号连接。'); return
+      setError('此版本暂时无法连接该账号，请更新应用。'); return
     }
     setPending(true)
     try {
@@ -56,6 +60,11 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
         if (!result) throw new Error('Unavailable bridge')
         onLinks({ sources: result.sources, error: result.error })
         if (result.error) setError(result.error)
+        else if (result.pdf) {
+          const bytes = Uint8Array.from(atob(result.pdf.base64), character => character.charCodeAt(0))
+          setLinkedPdf(new File([bytes], result.pdf.name, { type: 'application/pdf' }))
+          setAddress(''); navigate('file')
+        }
         else { setAddress(''); setMessage('来源已添加，安排会自动更新。') }
       } else if (detected.provider === 'google') {
         const result = await (google.connected && !google.reconnectRequired ? api.refreshGoogle() : api.connectGoogle())
@@ -95,53 +104,40 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
     } catch { setError('来源管理操作未保存，请重试。') }
     finally { setPending(false) }
   }
-  function navigate(next: string) { ++sourceRequest.current; setSourceFile(null); setSourcePending(false); setView(next); setError(''); setMessage(''); setSetup(null); if (links.error) onLinks({ ...links, error: '' }) }
-  async function viewSource() {
-    if (sourceFile) { ++sourceRequest.current; setSourceFile(null); return }
-    const request = ++sourceRequest.current
-    setSourcePending(true)
-    try {
-      const result = await window.focusControls?.getCalendarSource(view)
-      if (request === sourceRequest.current) setSourceFile(result || { text: '', downloadedAt: 0, error: '暂时无法读取源文件，请重试。' })
-    } catch { if (request === sourceRequest.current) setSourceFile({ text: '', downloadedAt: 0, error: '暂时无法读取源文件，请重试。' }) }
-    finally { if (request === sourceRequest.current) setSourcePending(false) }
-  }
+  function navigate(next: string) { if (next !== 'file') setLinkedPdf(null); setView(next); setError(''); setInvalidAddress(false); setMessage(''); if (links.error) onLinks({ ...links, error: '' }) }
   const selected = view === 'legacy' ? feed : view === 'ticktick' ? ticktick : links.sources.find(source => source.id === view)?.snapshot
+  const selectedFile = links.sources.find(source => source.id === view)?.kind === 'file'
   const row = rows.find(row => row.id === view)
   return <section className="import-connections" aria-label="统一导入">
     {view === 'home' ? <>
-      <div className="unified-import-title"><Link2 size={15} /><strong>连接日历与待办</strong></div>
+      <div className="unified-import-title"><Link2 size={15} /><strong>添加日程链接</strong></div>
       <form onSubmit={event => { event.preventDefault(); void connect() }}>
-        <label className="visually-hidden" htmlFor="import-address">日历或待办订阅链接</label>
-        <div className="unified-import-input"><input id="import-address" type="password" autoComplete="off" spellCheck={false} disabled={busy} placeholder="粘贴日历或待办链接" value={address}
-          onChange={event => { setAddress(event.target.value); setError(''); setMessage(''); setSetup(null); if (links.error) onLinks({ ...links, error: '' }) }} /><button type="submit" disabled={!detected || busy}>{pending ? '连接中' : '添加'}</button></div>
+        <label className="visually-hidden" htmlFor="import-address">日历、课表 PDF 或待办链接</label>
+        <div className="unified-import-input"><input id="import-address" type="password" autoComplete="off" spellCheck={false} disabled={busy} value={address}
+          aria-invalid={invalidAddress || undefined} aria-describedby={visibleError ? 'import-link-feedback' : undefined}
+          onBlur={() => { if (address.trim() && !busy) validateAddress() }}
+          onChange={event => { setAddress(event.target.value); setError(''); setInvalidAddress(false); setMessage(''); if (links.error) onLinks({ ...links, error: '' }) }} /><button type="submit" disabled={!address.trim() || busy}>{pending ? '读取中' : '添加'}</button></div>
       </form>
-      <p className="unified-import-hint" role="status" hidden={!hint}>{hint}</p>
+      {visibleError && <p id="import-link-feedback" className="unified-import-error google-connection-error" role="alert"><AlertCircle size={12} aria-hidden="true" /><span>{visibleError}</span></p>}
+      <button className="calendar-file-entry" disabled={busy} onClick={() => navigate('file')}><FileUp size={15} /><span><strong>导入文件</strong></span><ChevronRight size={13} /></button>
       {authorizing && <div className="google-auth-wait"><span>请在浏览器中完成账号授权…</span><button onClick={() => { void (google.authorizing ? window.focusControls?.cancelGoogle() : window.focusControls?.cancelMicrosoft()) }}>取消</button></div>}
       {message && <p className="unified-import-success" role="status"><Check size={12} />{message}</p>}
-      {setup && <button className="unified-text-button" onClick={() => navigate(setup)}>打开连接设置</button>}
       <button className="unified-import-summary" disabled={busy} onClick={() => navigate('manage')}><span><i className={connected ? 'is-connected' : ''} />{connected ? '已连接 ' + connected + ' 个来源' : '尚未连接来源'}</span><span>管理<ChevronRight size={12} /></span></button>
       <details className="unified-more"><summary>通过账号连接</summary><div><button disabled={busy} onClick={() => navigate('google')}>Google 账号</button><button disabled={busy} onClick={() => navigate('microsoft')}>微软账号</button></div></details>
     </> : <>
       <button className="unified-import-back" disabled={busy} onClick={() => navigate(view === 'manage' ? 'home' : 'manage')}><ArrowLeft size={12} />{view === 'manage' ? '返回添加来源' : '返回来源管理'}</button>
       {view === 'manage' ? <div className="unified-source-list">
         <h3>来源管理</h3>
-        {rows.length ? rows.map(source => <button key={source.id} onClick={() => navigate(source.id)}><span><strong>{source.name}</strong><small>{source.error ? '需要检查连接' : source.count + ' 条安排与待办'}</small></span><ChevronRight size={13} /></button>) : <p>添加链接后，已连接的来源会出现在这里。</p>}
-      </div> : view === 'google' ? <GoogleConnection state={google} onState={onGoogle} /> : view === 'microsoft' ? <MicrosoftTodoConnection state={microsoft} onState={onMicrosoft} /> : selected ? <div className="unified-source-detail">
+        {rows.length ? rows.map(source => <button key={source.id} onClick={() => navigate(source.id)}><span><strong>{source.name}</strong>{source.error ? <small>需要检查来源</small> : links.sources.find(item => item.id === source.id)?.kind === 'file' ? <small>本地文件</small> : null}</span><ChevronRight size={13} /></button>) : <p>添加链接或导入文件后，来源会出现在这里。</p>}
+      </div> : view === 'file' || view.startsWith('file:') ? <CalendarFileImport key={view} initialPdf={linkedPdf} replaceId={view.startsWith('file:') ? view.slice(5) : undefined} onState={onLinks} onDone={navigate} /> : view === 'google' ? <GoogleConnection state={google} onState={onGoogle} /> : view === 'microsoft' ? <MicrosoftTodoConnection state={microsoft} onState={onMicrosoft} /> : selected ? <div className="unified-source-detail">
         <h3>{row?.name || '日历订阅'}</h3>
-        <p>{selected.events.filter(event => !event.allDay).length} 个时间块 · {selected.events.filter(event => event.allDay).length} 个全天安排 · {selected.tasks?.length || 0} 条待办</p>
-        {selected.sourceEventCount !== undefined && <p>源文件包含 {selected.sourceEventCount} 条事件、{selected.sourceTaskCount || 0} 条待办；时间表按查看的日期展开。</p>}
-        {selected.lastSynced && <p>最近更新：{new Date(selected.lastSynced).toLocaleString('zh-CN')}</p>}
-        {selected.sourceEventCount && selected.sourceBusyCount === selected.sourceEventCount ? <p>来源只提供忙闲信息，未提供日程名称。</p> : null}
+        {selected.lastSynced && <p>{selectedFile ? '文件导入' : '最近更新'}：{new Date(selected.lastSynced).toLocaleString('zh-CN')}</p>}
+        {selectedFile && <p>这是本地文件快照，不会自动同步。学校调课后，重新导出文件并替换此来源。</p>}
         {selected.error && <p className="google-connection-error" role="alert">{selected.error}</p>}
         {selected.importWarnings?.map(warning => <p key={warning} role="status">{warning}</p>)}
-        <div className="google-connection-actions"><button disabled={busy || selected.refreshing} onClick={() => { void feedAction('refresh') }}><RefreshCw size={12} />{selected.refreshing ? '更新中' : '刷新'}</button><button disabled={busy || selected.refreshing} onClick={() => { void feedAction('remove') }}>移除来源</button></div>
-        <div className="calendar-source-view"><button className="unified-text-button" disabled={sourcePending} onClick={() => { void viewSource() }}>{sourcePending ? '读取源文件…' : sourceFile ? '收起源文件' : '查看完整源文件'}</button>
-          {sourceFile && <>{sourceFile.error ? <p role="alert">{sourceFile.error}</p> : <><p>以下是最近下载的原文，包含未显示在当前日期中的事件和扩展字段。{sourceFile.redacted ? '订阅地址已隐藏。' : ''}</p><pre tabIndex={0} aria-label="日历源文件原文">{sourceFile.text}</pre></>}</>}
-        </div>
-        <p className="unified-import-hint">移除来源不会修改原应用或删除本机日程。</p>
+        <div className="google-connection-actions">{selectedFile ? <button disabled={busy} onClick={() => navigate('file:' + view)}><FileUp size={12} />替换文件</button> : <button disabled={busy || selected.refreshing} onClick={() => { void feedAction('refresh') }}><RefreshCw size={12} />{selected.refreshing ? '更新中' : '刷新'}</button>}<button disabled={busy || selected.refreshing} onClick={() => { void feedAction('remove') }}>移除来源</button></div>
       </div> : <p>该来源已移除。</p>}
     </>}
-    {(error || links.error) && <p className="google-connection-error" role="alert">{error || links.error}</p>}
+    {view !== 'home' && visibleError && <p className="google-connection-error" role="alert">{visibleError}</p>}
   </section>
 }

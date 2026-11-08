@@ -12,29 +12,30 @@ export class CalendarImportError extends Error {
 
 // Only controlled error codes may reach the UI. Network errors can contain a private feed address.
 export function calendarErrorMessage(error: unknown, timedOut: boolean): string {
-  if (timedOut) return '连接超时。请确认当前网络能够访问 Google 日历；如果使用代理，请开启系统代理后重试。'
+  if (timedOut) return '读取超时，请检查网络后重试。'
   if (error instanceof CalendarImportError) {
     switch (error.code) {
-      case 'invalid-url': return '请粘贴完整的 HTTPS 或 webcal 日历订阅链接。'
+      case 'invalid-url': return '链接格式不正确，请使用完整的 HTTPS 或 webcal 地址。'
       case 'page-url': return '这是日历网页链接。请复制 Google 日历设置 → 整合日历 →「iCal 格式的私密网址」。'
       case 'http': {
-        if (error.detail === '401' || error.detail === '403') return '日历服务拒绝访问（HTTP ' + error.detail + '）。请重新复制「iCal 格式的私密网址」；不要使用需要登录的网页地址。'
-        if (error.detail === '404' || error.detail === '410') return '订阅地址已失效或不存在（HTTP ' + error.detail + '）。请在 Google 日历设置中重新复制私密网址。'
-        if (error.detail === '429') return '日历服务暂时限制访问（HTTP 429），请稍后重试。'
-        return '日历服务返回错误（HTTP ' + error.detail + '），请稍后重试。'
+        if (error.detail === '401' || error.detail === '403') return '链接需要登录或没有访问权限，请使用可直接读取的链接，或导入文件。'
+        if (error.detail === '404' || error.detail === '410') return '链接不存在或已失效，请检查地址，或重新获取链接。'
+        if (error.detail === '429') return '来源暂时限制访问，请稍后重试。'
+        return '来源服务暂时不可用，请稍后重试。'
       }
-      case 'html': return '链接返回了网页或登录页面。请使用「iCal 格式的私密网址」，不是浏览器地址栏中的链接。'
-      case 'format': return '下载内容不是有效的日历文件，请重新复制完整的 iCal 订阅网址。'
-      case 'parse': return '日历已下载，但其中的日期或重复规则无法解析。请反馈此提示以便继续排查。'
+      case 'html': return '这是网页链接，当前不支持直接读取教务网页。请使用 ICS / PDF 链接或文件导入。'
+      case 'format': return '暂不支持这个链接的内容，请使用 ICS 日历或 PDF 文件的直接链接。'
+      case 'parse': return '文件已读取，但日历内容无法解析，请重新导出后重试。'
       case 'recurrence': return '日历包含每秒或每分钟重复的安排，目前无法读取这类日历。'
       case 'events': return '近期安排超过 5000 条，目前无法读取这类日历。'
-      case 'size': return '日历文件超过 8 MB，目前无法读取这类日历。'
-      case 'redirect': return '订阅地址的跳转异常，请重新复制原始的 iCal 网址。'
+      case 'size': return error.detail === 'pdf' ? 'PDF 文件超过 20 MB，请导出只包含课表的 PDF。' : '日历文件超过 8 MB，目前无法读取这类日历。'
+      case 'redirect': return '链接跳转异常，请重新获取来源提供的直接链接。'
       case 'storage': return '日历已读取，但无法加密保存到本机，请检查本机存储权限后重试。'
     }
   }
   const value = error as { message?: unknown; code?: unknown; cause?: { code?: unknown } } | null
   const raw = [value?.code, value?.cause?.code, value?.message].filter(item => typeof item === 'string').join(' ')
-  const code = raw.match(/\b(?:ERR_[A-Z_]+|E(?:CONNRESET|CONNREFUSED|NOTFOUND|HOSTUNREACH|NETUNREACH|TIMEDOUT)|UND_ERR_[A-Z_]+)\b/)?.[0]
-  return '无法连接日历服务' + (code ? '（' + code + '）' : '') + '。请检查网络；如果使用代理，请开启系统代理后重试。'
+  if (/\b(?:ERR_NAME_NOT_RESOLVED|ENOTFOUND)\b/.test(raw)) return '找不到这个网站，请检查网址是否拼写正确。'
+  if (/\b(?:ERR_CERT_[A-Z_]+|ERR_SSL_[A-Z_]+)\b/.test(raw)) return '无法安全连接这个网站，请检查链接或改用文件导入。'
+  return '暂时无法连接这个网站，请检查网络或稍后重试。'
 }

@@ -80,6 +80,9 @@ declare global {
       onGoogle: (listener: (state: import('../../shared/google-calendar').GoogleCalendarState) => void) => () => void
       getTickTick: () => Promise<import('../../shared/focus').SubscriptionSnapshot>
       getCalendarLinks: () => Promise<import('../../shared/import-links').CalendarLinksState>
+      previewCalendarFile: (name: string, text: string, replaceId?: string) => Promise<import('../../shared/calendar-files').CalendarFilePreview | null>
+      commitCalendarFile: (token: string) => Promise<import('../../shared/import-links').CalendarLinkResult | null>
+      cancelCalendarFile: () => Promise<void>
       addCalendarLink: (url: string) => Promise<import('../../shared/import-links').CalendarLinkResult>
       refreshCalendarLink: (id: string) => Promise<import('../../shared/import-links').CalendarLinksState>
       removeCalendarLink: (id: string) => Promise<import('../../shared/import-links').CalendarLinksState>

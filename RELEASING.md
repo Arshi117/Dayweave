@@ -1,5 +1,11 @@
 # Windows release
 
+## Public release 0.1.2
+
+This is the second GitHub release, following v0.1.1. The intermediate local 0.1.x test builds are consolidated under public version 0.1.2. Build the Windows installer from this source commit with `npm run dist:win`; build the two Mac ZIPs with the manual `macOS release builds` workflow on the same ref and version. The workflow reads the public desktop application registration from the encrypted `DAYWEAVE_DESKTOP_CLIENTS` Actions secret; it must never contain user authorization, calendars or subscription links.
+
+Validate the Windows package using all 41 tests plus `scripts/verify-bottom-dock.cjs` and `scripts/verify-dock-visibility.cjs` with `DAYWEAVE_TEST_APP_ROOT` pointing at the packaged `app.asar`. Mac jobs verify their native architecture and ad-hoc signatures and run `scripts/verify-macos.cjs` against their packaged `app.asar`. Upload the Windows EXE, both Mac ZIPs, the Mac instructions and one combined SHA-256 checksum file to a draft v0.1.2 release, then publish only when all three packages pass. The release tag must point to the complete corresponding source commit. Generated `out` files and local registration remain excluded from source control.
+
 ## Install and use
 
 Distribute `release/Dayweave-Setup-0.1.1-x64.exe` to Windows x64 testers. The installer includes Electron and all application resources; users do not need Node.js or npm. It installs for the current user, creates desktop and Start menu shortcuts, and registers a standard uninstaller. The setup wizard offers an installation directory. Launch Dayweave through either shortcut. Exit through the tray menu.

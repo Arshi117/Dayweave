@@ -1,0 +1,78 @@
+name: macOS release builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version matching package.json
+        required: true
+        default: 0.1.2
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Prepare public desktop application registration
+        env:
+          DESKTOP_CLIENTS: ${{ secrets.DAYWEAVE_DESKTOP_CLIENTS }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          if (require('./package.json').version !== process.env.RELEASE_VERSION) throw Error('Version mismatch');
+          const config = JSON.parse(process.env.DESKTOP_CLIENTS);
+          fs.mkdirSync('build', {recursive:true});
+          fs.writeFileSync('build/desktop-clients.json', JSON.stringify(config));
+          NODE
+          node scripts/prepare-release.cjs
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Build and ad-hoc sign macOS package
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --mac zip --${{ matrix.arch }} --publish never
+      - name: Validate bundle and launch with an isolated profile
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          APP_PATH=$(find release -maxdepth 2 -name Dayweave.app -print -quit)
+          test -n "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          test "$(lipo -archs "$APP_PATH/Contents/MacOS/Dayweave")" = "$EXPECTED_ARCH"
+          DAYWEAVE_TEST_APP_ROOT="$APP_PATH/Contents/Resources/app.asar" npx electron scripts/verify-macos.cjs
+      - name: Generate checksum
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_ARCH: ${{ matrix.arch }}
+        run: |
+          cd release
+          shasum -a 256 "Dayweave-${RELEASE_VERSION}-mac-${RELEASE_ARCH}.zip" > "SHA256SUMS-mac-${RELEASE_ARCH}.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/Dayweave-*-mac-${{ matrix.arch }}.zip
+            release/SHA256SUMS-mac-${{ matrix.arch }}.txt

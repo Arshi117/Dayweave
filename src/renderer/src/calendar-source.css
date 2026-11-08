@@ -7,6 +7,4 @@
 .focus-shell .calendar-source-fields dl { margin-bottom: 0; }
 .focus-shell .calendar-source-fields dt { color: var(--dw-text); margin-top: 10px; }
 .focus-shell .calendar-source-fields dd { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
-.focus-shell .calendar-source-view { padding-top: 10px; }
-.focus-shell .calendar-source-view pre { max-height: 250px; overflow: auto; padding: 10px; border: 1px solid var(--dw-line); border-radius: 8px; background: var(--dw-field); color: var(--dw-text); font-size: 10px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .focus-shell .drawer-source-notice { max-height: 85px; overflow-y: auto; border-color: var(--dw-line); background: var(--dw-tint); color: var(--dw-warning); }

@@ -5,7 +5,9 @@ import { CalendarSubscription, validCalendarRange } from './calendar-subscriptio
 import { GoogleCalendarConnection } from './google-calendar'
 import { MicrosoftTodoConnection } from './microsoft-todo'
 import { CalendarLinks } from './calendar-links'
-import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
+import { createTaskbarProbe } from './taskbar-visibility'
+import { shouldRecoverDock } from '../shared/dock-visibility'
+import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, bottomDockLayout, isBottomDockCandidate, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
 
 interface DimensionGesture { target: ResizeTarget; edge: ResizeEdge; x: number; y: number; dimensions: FocusDimensions; anchor: FocusAnchor; left: boolean; above: boolean }
 const resizeEdges: ResizeEdge[] = ['left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
@@ -28,6 +30,9 @@ export class FocusWindow {
   private left = false
   private applyingBounds = false
   private appliedPosition: FocusAnchor | null = null
+  private docked = process.platform === 'win32'
+  private nativeMoving = false
+  private dockVisibilityTimer: NodeJS.Timeout | null = null
   private readonly settingsFile: string
   constructor(private directory: string, private preload: string) {
     this.settingsFile = join(directory, 'focus-window.json')
@@ -72,6 +77,9 @@ export class FocusWindow {
     ipcMain.handle('focus:microsoft-disconnect', event => allowed(event.sender.id) ? this.microsoft.disconnect() : null)
     ipcMain.handle('focus:microsoft-select', (event, ids: unknown) => allowed(event.sender.id) && Array.isArray(ids) && ids.length <= 20 && ids.every(id => typeof id === 'string' && id.length <= 2000) ? this.microsoft.select(ids) : null)
     ipcMain.handle('focus:links-state', event => allowed(event.sender.id) ? this.links.state() : null)
+    ipcMain.handle('focus:file-preview', (event, name: unknown, text: unknown, replaceId: unknown) => allowed(event.sender.id) ? this.links.previewFile(name, text, replaceId) : null)
+    ipcMain.handle('focus:file-commit', (event, token: unknown) => allowed(event.sender.id) && typeof token === 'string' && token.length <= 100 ? this.links.commitFile(token) : null)
+    ipcMain.handle('focus:file-cancel', event => { if (allowed(event.sender.id)) this.links.cancelFile() })
     ipcMain.handle('focus:calendar-source', (event, id: unknown) => {
       if (!allowed(event.sender.id) || typeof id !== 'string' || id.length > 100) return null
       return id === 'legacy' ? this.feed.readSource() : id === 'ticktick' ? this.ticktick.readSource() : this.links.readSource(id)
@@ -118,10 +126,11 @@ export class FocusWindow {
     try {
       const saved = JSON.parse(readFileSync(this.settingsFile, 'utf8'))
       if (Number.isFinite(saved.x) && Number.isFinite(saved.y)) { x = saved.x; y = saved.y }
+      this.docked = process.platform === 'win32' && saved.docked !== false
       this.dimensions = focusDimensions(saved)
     } catch { /* Start near the top right on first use. */ }
     this.anchor = { x, y }
-    const window = new BrowserWindow({ x, y, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT, title: 'Dayweave · 当前安排', show: false,
+    const window = new BrowserWindow({ x, y, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT, title: (process.env.DAYWEAVE_DEV === '1' ? 'Dayweave 开发版' : 'Dayweave') + ' · 当前安排', show: false,
       frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false, alwaysOnTop: true,
       resizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, autoHideMenuBar: true,
       webPreferences: { preload: this.preload, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } })
@@ -133,14 +142,19 @@ export class FocusWindow {
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.webContents.on('will-navigate', event => event.preventDefault())
     window.on('page-title-updated', event => event.preventDefault())
+    window.on('will-move', () => {
+      this.nativeMoving = true
+      this.docked = false
+    })
     window.on('move', () => {
       if (this.applyingBounds) return
       const bounds = window.getContentBounds()
       if (this.appliedPosition && bounds.x === this.appliedPosition.x && bounds.y === this.appliedPosition.y) return
       this.anchor = { x: bounds.x + (this.left ? bounds.width - this.dimensions.stripWidth : 0), y: bounds.y + (this.above ? bounds.height - FOCUS_COMPACT_HEIGHT : 0) }
       if (this.positionTimer) clearTimeout(this.positionTimer)
-      this.positionTimer = setTimeout(() => this.savePosition(), 300)
+      this.positionTimer = setTimeout(() => { if (this.nativeMoving) this.finishNativeMove(); else this.savePosition() }, 300)
     })
+    window.on('moved', () => { if (this.nativeMoving) this.finishNativeMove() })
     window.on('close', event => { event.preventDefault(); window.hide() })
     window.on('blur', () => this.finishDimensionResize())
     window.webContents.on('render-process-gone', () => { if (!window.isDestroyed()) window.reload() })
@@ -152,11 +166,41 @@ export class FocusWindow {
     this.keepVisible()
     await Promise.all([this.feed.load(), this.google.load(), this.ticktick.load(), this.microsoft.load(), this.links.load()])
     this.show()
+    if (process.platform === 'win32') {
+      try {
+        const probe = createTaskbarProbe(window)
+        if (probe) this.dockVisibilityTimer = setInterval(() => {
+          if (window.isDestroyed() || !this.docked || !window.isVisible() || window.isMinimized() || this.nativeMoving || this.dimensionGesture || window.getOpacity() === 0) return
+          try {
+            if (shouldRecoverDock({ docked: this.docked, visible: true, minimized: false, moving: false, samples: probe() })) {
+              window.setAlwaysOnTop(true, 'pop-up-menu')
+              window.moveTop() // Z-order only: preserve the user's foreground app.
+            }
+          } catch { /* A destroyed or changing foreign HWND is transient. */ }
+        }, 500)
+      } catch (error) { console.warn('Taskbar visibility monitoring unavailable:', error instanceof Error ? error.message : String(error)) }
+    }
   }
   private savePosition() {
     if (!this.window || this.window.isDestroyed()) return
     const { x, y } = this.anchor
-    try { writeFileSync(this.settingsFile, JSON.stringify({ x, y, ...this.dimensions }), 'utf8') } catch { /* Movement and resizing remain usable for this session. */ }
+    try { writeFileSync(this.settingsFile, JSON.stringify({ x, y, docked: this.docked, ...this.dimensions }), 'utf8') } catch { /* Movement and resizing remain usable for this session. */ }
+  }
+  private finishNativeMove() {
+    if (!this.window || this.window.isDestroyed()) return
+    this.nativeMoving = false
+    if (this.positionTimer) { clearTimeout(this.positionTimer); this.positionTimer = null }
+    const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
+    this.docked = process.platform === 'win32' && isBottomDockCandidate(this.anchor, display.workArea)
+    this.keepVisible()
+    this.savePosition()
+  }
+  dockToBottom() {
+    if (process.platform !== 'win32') return
+    this.docked = true
+    this.keepVisible()
+    this.savePosition()
+    this.window?.showInactive()
   }
   private validResize(target: unknown, edge: unknown) {
     return typeof edge === 'string' && resizeEdges.includes(edge as ResizeEdge) && (target === 'strip' ? !this.expanded && (edge === 'left' || edge === 'right') : target === 'calendar' && this.calendarOpen)
@@ -186,14 +230,19 @@ export class FocusWindow {
   }
   keepVisible() {
     if (!this.window || this.window.isDestroyed()) return
-    const area = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT }).workArea
+    const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
+    const area = display.workArea
     const sidebarWidth = this.expanded ? Math.max(FOCUS_WIDTH, this.dimensions.stripWidth) : this.dimensions.stripWidth
     const width = sidebarWidth + (this.calendarOpen ? FOCUS_GAP + this.dimensions.calendarWidth : 0)
-    const layout = focusWindowLayout(this.anchor, this.contentHeight, area, width, this.dimensions.stripWidth, this.dimensionGesture?.left, this.dimensionGesture?.above)
+    const layout = this.docked
+      ? bottomDockLayout(this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth)
+      : focusWindowLayout(this.anchor, this.contentHeight, area, width, this.dimensions.stripWidth, this.dimensionGesture?.left, this.dimensionGesture?.above ?? false)
     this.anchor = layout.anchor
     this.above = layout.above
     this.left = layout.left
-    this.window.webContents.send('focus:placement', { above: this.above, left: this.left, availableHeight: area.height, availableWidth: area.width, dimensions: this.dimensions })
+    if (process.platform === 'win32') this.window.setAlwaysOnTop(true, this.docked ? 'pop-up-menu' : 'floating')
+    const availableHeight = this.docked ? this.anchor.y - display.bounds.y + FOCUS_COMPACT_HEIGHT : area.height
+    this.window.webContents.send('focus:placement', { above: this.above, left: this.left, docked: this.docked, availableHeight, availableWidth: area.width, dimensions: this.dimensions })
     const current = this.window.getContentBounds()
     if (current.x === layout.bounds.x && current.y === layout.bounds.y && current.width === layout.bounds.width && current.height === layout.bounds.height) return
     this.applyingBounds = true
@@ -208,6 +257,7 @@ export class FocusWindow {
   openCalendar() { this.show(); this.window?.webContents.send('focus:open-calendar') }
   openSettings() { this.show(); this.window?.webContents.send('focus:open-settings') }
   stop() {
+    if (this.dockVisibilityTimer) clearInterval(this.dockVisibilityTimer)
     if (this.positionTimer) clearTimeout(this.positionTimer)
     this.savePosition()
     this.feed.stop()

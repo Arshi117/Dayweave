@@ -30,44 +30,32 @@ export function TickTickConnection({ state, onState }: { state: SubscriptionSnap
 }
 
 export function MicrosoftTodoConnection({ state, onState }: { state: MicrosoftTodoState; onState: (state: MicrosoftTodoState) => void }) {
-  const [clientId, setClientId] = useState(''), [pending, setPending] = useState(false), [error, setError] = useState('')
+  const [pending, setPending] = useState(false), [error, setError] = useState('')
   const [selection, setSelection] = useState<string[]>([]), [dirty, setDirty] = useState(false)
   useEffect(() => { if (!dirty) setSelection(state.lists.filter(list => list.selected).map(list => list.id)) }, [state.lists, dirty])
-  async function action(kind: 'configure' | 'connect' | 'cancel' | 'refresh' | 'select' | 'disconnect') {
+  async function action(kind: 'connect' | 'cancel' | 'refresh' | 'select') {
     const api = window.focusControls
     if (!api || pending && kind !== 'cancel') return
     if (kind !== 'cancel') setPending(true)
     setError('')
     try {
-      const result = await (kind === 'configure' ? api.configureMicrosoft(clientId) : kind === 'connect' ? api.connectMicrosoft() : kind === 'cancel' ? api.cancelMicrosoft()
-        : kind === 'refresh' ? api.refreshMicrosoft() : kind === 'select' ? api.selectMicrosoftLists(selection) : api.disconnectMicrosoft())
+      const result = await (kind === 'connect' ? api.connectMicrosoft() : kind === 'cancel' ? api.cancelMicrosoft()
+        : kind === 'refresh' ? api.refreshMicrosoft() : api.selectMicrosoftLists(selection))
       if (result) onState(result)
-      if (kind === 'select' || kind === 'disconnect') setDirty(false)
-      if (kind === 'configure' && result?.configured) setClientId('')
+      if (kind === 'select' && !result?.error) setDirty(false)
     } catch { setError('微软连接操作未完成，请重试。') }
     finally { if (kind !== 'cancel') setPending(false) }
   }
   const busy = pending || state.refreshing || state.authorizing
+  const visibleError = error || state.error || (!state.configured ? '此版本暂时无法连接微软账号，请更新应用。' : selection.length > 20 ? '最多选择 20 个清单。' : '')
   return <section className="task-connection" aria-label="Microsoft To Do 导入">
     <div className="google-connection-heading"><ListTodo size={14} /><strong>Microsoft To Do</strong>{state.connected && <span><Check size={11} />{state.error ? '已授权 · 读取失败' : '已连接 · 只读'}</span>}</div>
-    <p>读取微软待办清单，保留任务名称、截止日期和说明。</p>
-    {!state.configured ? <>
-      <p>此开发版尚未配置微软应用。配置完成后，用户可直接连接账号。</p>
-      <details className="google-setup-help"><summary>开发者设置</summary><p>在 Microsoft Entra 注册桌面应用，允许组织和个人账号；回调地址填写 http://localhost/oauth2callback，仅添加 Tasks.Read 委托权限。详细步骤见 IMPORTS_SETUP.md。</p>
-        <form onSubmit={event => { event.preventDefault(); void action('configure') }}><label htmlFor="microsoft-client-id">Application (client) ID</label><input id="microsoft-client-id" value={clientId} placeholder="应用 ID，无需客户端密码" autoComplete="off" onChange={event => setClientId(event.target.value)} /><button className="google-connect-button" disabled={!clientId.trim() || busy}>保存应用配置</button></form>
-      </details>
-    </> : <>
       {state.authorizing ? <div className="google-auth-wait" role="status"><span>请在系统浏览器完成微软授权…</span><button onClick={() => { void action('cancel') }}>取消</button></div>
-        : !state.connected || state.reconnectRequired ? <button className="google-connect-button" disabled={busy} onClick={() => { void action('connect') }}>{state.reconnectRequired ? '重新连接微软账号' : '连接 Microsoft To Do'}</button> : null}
-      {!state.connected && !state.authorizing && <details className="google-setup-help"><summary>更换开发者应用配置</summary><form onSubmit={event => { event.preventDefault(); void action('configure') }}><input aria-label="微软应用 ID" value={clientId} onChange={event => setClientId(event.target.value)} /><button disabled={busy || !clientId.trim()}>保存</button></form></details>}
+        : !state.connected || state.reconnectRequired ? <button className="google-connect-button" disabled={busy || !state.configured} onClick={() => { void action('connect') }}>{state.reconnectRequired ? '重新连接微软账号' : '连接 Microsoft To Do'}</button> : null}
       {state.connected && <>
         <div className="google-calendar-list" aria-label="选择微软待办清单">{state.lists.map(list => <label key={list.id}><input type="checkbox" disabled={busy} checked={selection.includes(list.id)} onChange={event => { setDirty(true); setSelection(current => event.target.checked ? [...current, list.id] : current.filter(id => id !== list.id)) }} /><span>{list.name}</span></label>)}</div>
         <div className="google-connection-actions"><button disabled={busy || !dirty || selection.length > 20} onClick={() => { void action('select') }}>同步所选清单</button><button disabled={busy} onClick={() => { void action('refresh') }}><RefreshCw size={11} />刷新</button></div>
-        <p className="task-connection-status" role="status">{state.refreshing ? '正在读取待办…' : state.error && !state.lastSynced ? '尚未成功读取待办' : (state.error ? '显示上次读取的 ' : '') + state.tasks.length + ' 条未完成任务'}{dirty ? ' · 选择尚未同步' : ''}{selection.length > 20 ? ' · 最多选择 20 个清单' : ''}</p>
-        <button className="google-secondary" disabled={busy} onClick={() => { void action('disconnect') }}>断开微软账号</button>
       </>}
-    </>}
-    {(error || state.error) && <p className="google-connection-error" role="alert">{error || state.error}</p>}
-    <p className="google-connection-note">任务先显示在待办列表，点击“安排时间”可创建本机日程。不会修改或完成微软任务。</p>
+    {visibleError && <p className="google-connection-error" role="alert">{visibleError}</p>}
   </section>
 }

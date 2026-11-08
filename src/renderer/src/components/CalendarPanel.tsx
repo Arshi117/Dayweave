@@ -52,7 +52,6 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
   const loading = subscription.configured && source !== 'local' && !covered && subscription.refreshing
   const hiddenTitles = imported.length > 0 && subscription.redactedCount === imported.length
   const hasEvents = visible.length > 0
-  const nearest = [...all].filter(event => event.end > now).sort((a, b) => a.start - b.start)[0]
   const month = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' }).format(anchor)
   useEffect(() => { onRangeChange({ from, to: until }) }, [from, until, onRangeChange])
   useEffect(() => {
@@ -91,7 +90,6 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
     setEditing({ id: crypto.randomUUID(), title: task.title, date, startTime, endTime, kind: 'block', completed: false, color: 'amber' })
   }
   const calendar = <div className="calendar-schedule-pane"><WeekCalendar days={days} entries={[...(source === 'subscription' ? [] : timed), ...(source === 'local' ? [] : subscribed.filter(entry => !entry.allDay))]} allDayEntries={source === 'local' ? [] : subscribed.filter(entry => entry.allDay)} now={new Date(now)} onCreate={create} onEdit={entry => { setSchedulingTask(false); if (entry.readOnly) setInspecting(entry); else setEditing(entry) }} onChange={save} onTaskDrop={dropTask} />
-    {!hasEvents && !loading && <div className="drawer-empty-week"><span>{subscription.configured && !covered && source !== 'local' ? '这一周的订阅尚未读取完整' : source === 'subscription' ? '此订阅在这一周没有安排' : '这一周还没有安排'}</span>{nearest && <button onClick={() => setAnchor(new Date(nearest.start))}>查看最近安排</button>}</div>}
   </div>
   return <section ref={panel} className={'focus-calendar-panel' + (height < 520 ? ' is-short' : '')} style={{ height, '--calendar-panel-height': height + 'px' } as CSSProperties} aria-label="日历时间表">
     <header className="drawer-calendar-header">
@@ -104,7 +102,7 @@ export function CalendarPanel({ entries, subscription, taskCompletion, onTaskCom
         <button className="drawer-icon" aria-label="收起日历" title="收起日历" onClick={onClose}><X size={16} /></button>
       </nav>
     </header>
-    <div className="drawer-calendar-source"><span>{days[0].getMonth() + 1}月{days[0].getDate()}日 — {days[6].getMonth() + 1}月{days[6].getDate()}日</span><select aria-label="显示哪些日程" title={subscription.calendarName || subscription.sourceLabel || '日程来源'} value={source} onChange={event => setSource(event.target.value as typeof source)}><option value="all">全部安排 {localCount + importedCount}</option><option value="subscription">订阅 {importedCount}</option><option value="local">本机 {localCount}</option></select></div>
+    <div className="drawer-calendar-source"><span>{days[0].getMonth() + 1}月{days[0].getDate()}日 — {days[6].getMonth() + 1}月{days[6].getDate()}日</span><select aria-label="显示哪些日程" title={subscription.calendarName || subscription.sourceLabel || '日程来源'} value={source} onChange={event => setSource(event.target.value as typeof source)}><option value="all">全部安排 {localCount + importedCount}</option><option value="subscription">导入 {importedCount}</option><option value="local">本机 {localCount}</option></select></div>
     {loading && <div className="drawer-loading" role="status">正在读取本周安排…</div>}
     {subscription.configured && source !== 'local' && hiddenTitles && <div className="drawer-source-notice" role="status">{subscription.connectionType === 'google' ? '这些安排的名称未向当前账号开放，请检查该日历的访问权限。' : subscription.sourceEventCount && subscription.sourceBusyCount === subscription.sourceEventCount ? '来源文件仅提供忙闲信息，未提供课程名称。' : '此订阅中的安排名称为“Busy”（忙碌），未提供课程名称。'}{subscription.addressKind === 'public' ? ' 当前连接的是公开 iCal 订阅。' : ''}</div>}
     {subscription.configured && subscription.error && source !== 'local' && <div className="drawer-source-notice" role="alert">{subscription.error}</div>}

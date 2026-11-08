@@ -11,8 +11,8 @@ export function readBackdrop(): number {
 export const APPEARANCE_KEY = 'dayweave.appearance.v1'
 export const APPEARANCES = [
   { id: 'paper', name: '纸感留白', description: '暖白底色 · 清晰留白' },
-  { id: 'graphite', name: '专注胶囊', description: '深色胶囊 · 环形计时' },
-  { id: 'silver', name: '冷灰悬浮', description: '冷灰底色 · 居中倒计时' },
+  { id: 'graphite', name: '专注胶囊', description: '深色胶囊 · 紧凑布局' },
+  { id: 'silver', name: '冷灰悬浮', description: '冷灰底色 · 清晰层次' },
 ] as const
 export type Appearance = typeof APPEARANCES[number]['id']
 export function isAppearance(value: unknown): value is Appearance {

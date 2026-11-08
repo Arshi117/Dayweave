@@ -1,0 +1,41 @@
+html.dayweave-dock-preview, html.dayweave-dock-preview body { background: #d6e4ea !important; }
+.dayweave-dock-preview body { display: block; padding: 0; min-width: 360px; overflow: hidden; }
+.dayweave-dock-preview #root { width: 100%; height: 100%; margin: 0; }
+.dayweave-dock-preview::before { display: none; }
+.dock-preview-stage { position: fixed; inset: 0; overflow: hidden; color: #324650; font-family: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif; }
+.dock-preview-caption { position: absolute; z-index: 1; left: 40px; top: 38px; font-size: 13px; color: #425e6c; }
+.dock-preview-caption > span { font-weight: 500; }
+.dock-preview-caption p { margin: 9px 0 0; font-size: 12px; color: #637e8b; }
+.dock-preview-wallpaper { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(125deg,#e9eeea,#d0e1e8 55%,#a9c5d9); }
+.dock-preview-wallpaper i { position: absolute; width: 70vw; height: 70vw; border-radius: 44%; border: 1px solid #ffffff46; box-shadow: inset 35px 0 100px #ffffffe0, 35px 10px 100px #507d9540; transform: rotate(-35deg); }
+.dock-preview-wallpaper i:nth-child(1) { right: -24vw; top: -10vw; }
+.dock-preview-wallpaper i:nth-child(2) { right: -17vw; top: 4vw; }
+.dock-preview-wallpaper i:nth-child(3) { right: -12vw; top: 20vw; }
+.dock-preview-taskbar { position: absolute; z-index: 2; bottom: 0; left: 0; right: 0; height: 54px; background: #f5f9fbbf; backdrop-filter: blur(24px); border-top: 1px solid #ffffffb3; box-shadow: 0 -1px 15px #45677a06; }
+.dock-preview-apps { position: absolute; left: max(410px, 50%); top: 0; height: 100%; display: flex; align-items: center; gap: 25px; color: #536572; }
+.dock-preview-start { display: grid; grid-template-columns: repeat(2,10px); grid-template-rows: repeat(2,10px); gap: 2px; }
+.dock-preview-start i { background: #358cc8; }
+.dock-preview-folder { color: #cd9c4f; }
+.dock-preview-browser { color: #2b94b6; }
+.dock-preview-system { position: absolute; right: 20px; top: 0; height: 100%; display: flex; align-items: center; gap: 10px; color: #475863; }
+.dock-preview-system > span { margin-left: 6px; text-align: right; font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.dock-preview-system small { display: block; font-size: 10px; }
+.dock-preview-widget { position: absolute; z-index: 4; width: min(360px, calc(100vw - 16px)); }
+.dock-preview-widget.has-calendar { width: min(1068px, calc(100vw - 16px)); }
+.dock-preview-widget .focus-shell { --focus-sidebar-width: 348px !important; padding: 6px; }
+.dock-preview-widget .focus-strip { height: 32px; }
+.dock-preview-widget .focus-pill { height: 32px; min-height: 32px; -webkit-app-region: no-drag; cursor: grab; touch-action: none; }
+.dock-preview-widget .focus-pill-summary { padding-right: 14px; }
+.dock-preview-widget .focus-pill-title { font-size: 12px; font-weight: 500; }
+.dock-preview-widget .focus-pill-marker { width: 25px; }
+.dock-preview-widget .focus-shell.is-expanded .focus-sidebar { gap: 12px; border: 0; border-radius: 0; overflow: visible; background: transparent; box-shadow: none; }
+.dock-preview-widget .focus-shell.is-expanded .focus-details { border: 1px solid var(--dw-line); border-radius: 14px; background: var(--dw-surface); box-shadow: 0 8px 30px #203b5426; padding-top: 8px; }
+.dock-preview-widget .focus-details-header { border-top: 0; }
+.dock-preview-widget .focus-pill, .dock-preview-widget .focus-shell.is-expanded .focus-pill { border: 1px solid var(--dw-line); border-radius: 10px; background: var(--dw-surface); box-shadow: 0 4px 15px #2640531a; }
+.dock-preview-widget[data-docked='true'] .focus-pill, .dock-preview-widget[data-docked='true'] .focus-shell.is-expanded .focus-pill { border-color: transparent; border-radius: 0; background: transparent; box-shadow: none; }
+.dock-preview-widget[data-docked='true'] .focus-pill:hover { background: #ffffff40; }
+.dock-preview-widget .focus-pill-progress { height: 2px; top: 0; bottom: auto; left: 0; right: 0; opacity: .75; }
+.dock-preview-widget[data-dragging='true'] { cursor: grabbing; user-select: none; }
+.dock-preview-widget[data-dragging='true'] .focus-pill { cursor: grabbing; }
+.dock-preview-widget .dimension-grip, .dock-preview-widget .first-use-hint { display: none; }
+@media (max-width: 780px) { .dock-preview-apps > svg { display: none; } .dock-preview-system > svg { display: none; } }

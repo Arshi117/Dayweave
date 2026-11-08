@@ -8,8 +8,10 @@ let tray: Tray | null = null
 let quitting = false
 
 // Preserve the existing profile across development and installed releases.
+const development = process.env.DAYWEAVE_DEV === '1'
+if (development) app.setName('Dayweave Dev')
 const profile = app.commandLine.getSwitchValue('user-data-dir')
-const profileDirectory = profile && isAbsolute(profile) ? profile : join(app.getPath('appData'), 'dayweave-desktop')
+const profileDirectory = profile && isAbsolute(profile) ? profile : join(app.getPath('appData'), development ? 'dayweave-dev' : 'dayweave-desktop')
 mkdirSync(profileDirectory, { recursive: true })
 app.setPath('userData', profileDirectory)
 
@@ -37,9 +39,10 @@ function createTray() {
     image.setTemplateImage(true)
   }
   tray = new Tray(image)
-  tray.setToolTip('Dayweave · 当前安排')
+  tray.setToolTip((development ? 'Dayweave 开发版' : 'Dayweave') + ' · 当前安排')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '显示／隐藏悬浮条', click: () => focus?.toggle() },
+    ...(process.platform === 'win32' ? [{ label: '停靠到底部', click: () => focus?.dockToBottom() }] : []),
     { label: '展开日历', click: () => focus?.openCalendar() },
     { label: '连接与导入', click: () => focus?.openSettings() },
     { type: 'separator' },
@@ -53,7 +56,7 @@ if (!app.requestSingleInstanceLock()) app.quit()
 else {
   app.on('second-instance', () => focus?.show())
   app.whenReady().then(async () => {
-    if (process.platform === 'win32') app.setAppUserModelId('Dayweave.Desktop')
+    if (process.platform === 'win32') app.setAppUserModelId(development ? 'Dayweave.Development' : 'Dayweave.Desktop')
     if (process.platform === 'darwin') {
       Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]))
       app.dock?.hide()

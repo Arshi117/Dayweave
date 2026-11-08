@@ -35,7 +35,7 @@ export interface SubscriptionSnapshot {
   sourceTaskCount?: number
   sourceOtherCount?: number
   importWarnings?: string[]
-  connectionType?: 'ical' | 'google'
+  connectionType?: 'ical' | 'google' | 'file'
   tasks?: import('./imports').ImportedTask[]
   hasTimedSource?: boolean
 }

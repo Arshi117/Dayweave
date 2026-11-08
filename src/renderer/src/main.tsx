@@ -1,7 +1,12 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { FocusBar } from './FocusBar'
+import { initializeUiPreview } from './ui-preview'
+import { DockPreview } from './DockPreview'
 import './styles.css'
+
+const dockPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('preview') === 'dock'
+if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('preview') && !window.focusControls) initializeUiPreview()
 
 function BrowserPreview() {
   return <main className="browser-preview">
@@ -14,5 +19,5 @@ function BrowserPreview() {
   </main>
 }
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>{window.focusControls ? <FocusBar /> : <BrowserPreview />}</React.StrictMode>,
+  <React.StrictMode>{window.focusControls ? dockPreview ? <DockPreview><FocusBar /></DockPreview> : <FocusBar /> : <BrowserPreview />}</React.StrictMode>,
 )

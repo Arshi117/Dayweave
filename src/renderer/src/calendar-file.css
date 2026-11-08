@@ -1,0 +1,38 @@
+.calendar-file-entry { display: flex; align-items: center; gap: 9px; width: 100%; margin: 12px 0 0; padding: 12px 9px; border: 1px solid var(--dw-line); border-radius: 9px; background: var(--dw-tint); color: var(--dw-text); text-align: left; }
+.calendar-file-entry > span { flex: 1; min-width: 0; }
+.calendar-file-entry strong { display: block; font-size: 11px; font-weight: 500; }
+.calendar-file-import h3 { margin: 10px 0; font-size: 12px; font-weight: 500; color: var(--dw-text); }
+.focus-settings .calendar-file-import p { margin: 8px 0 12px; font-size: 10px; line-height: 1.65; color: var(--dw-muted); overflow-wrap: anywhere; }
+.calendar-file-picker { position: relative; display: flex; align-items: center; justify-content: center; min-height: 64px; padding: 12px; border: 1px dashed var(--dw-line); border-radius: 8px; color: var(--dw-accent); font-size: 11px; cursor: pointer; }
+.calendar-file-picker input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.calendar-file-picker:focus-within { outline: 2px solid var(--dw-accent); outline-offset: 2px; }
+.calendar-file-preview ul { padding: 0; margin: 10px 0; list-style: none; }
+.calendar-file-preview li { margin-bottom: 7px; padding: 8px; border: 1px solid var(--dw-line); border-radius: 7px; font-size: 10px; overflow-wrap: anywhere; }
+.calendar-file-preview li strong, .calendar-file-preview li span { display: block; margin-bottom: 4px; }
+.calendar-file-preview li span { color: var(--dw-muted); font-size: 9px; line-height: 1.5; }
+.pdf-reference { margin-bottom: 15px; border: 1px solid var(--dw-line); border-radius: 7px; overflow: hidden; }
+.pdf-reference-scroll { max-height: 280px; overflow: auto; background: white; }
+.pdf-reference canvas { display: block; width: 650px; max-width: none; }
+.pdf-reference canvas:not([width]) { display: none; }
+.pdf-page-controls { display: flex; justify-content: space-between; align-items: center; padding: 7px; font-size: 9px; }
+.pdf-page-controls button { border: 1px solid var(--dw-line); border-radius: 5px; background: var(--dw-tint); color: var(--dw-accent); padding: 4px 7px; }
+.pdf-reference details { padding: 8px; font-size: 10px; color: var(--dw-muted); }
+.pdf-reference pre { max-height: 150px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; font-size: 10px; }
+.pdf-timetable fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.pdf-timetable label { display: block; min-width: 0; margin-bottom: 9px; color: var(--dw-muted); font-size: 10px; }
+.pdf-timetable :is(input, select) { display: block; box-sizing: border-box; width: 100%; min-width: 0; margin-top: 5px; padding: 7px; border: 1px solid var(--dw-line); border-radius: 6px; background: var(--dw-field); color: var(--dw-text); font: inherit; color-scheme: light dark; }
+.focus-shell[data-appearance='paper'] .pdf-timetable :is(input, select), .focus-shell[data-appearance='silver'] .pdf-timetable :is(input, select) { color-scheme: light; }
+.timetable-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.timetable-course { margin: 12px 0; padding: 10px; border: 1px solid var(--dw-line); border-radius: 8px; }
+.timetable-course-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font-size: 10px; }
+.timetable-course-heading strong { font-weight: 500; }
+.timetable-course-heading button { background: transparent; color: var(--dw-muted); border: 0; padding: 2px; font-size: 10px; }
+.pdf-timetable > .google-connect-button { margin-top: 12px; }
+.pdf-recognition-result { margin: 12px 0; padding: 0 10px; border: 1px solid var(--dw-line); border-radius: 8px; background: var(--dw-tint); }
+.timetable-source-text { font-size: 10px; color: var(--dw-muted); margin: 8px 0; }
+.timetable-source-text pre { max-height: 160px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; font: inherit; line-height: 1.6; }
+.pdf-timetable .timetable-unscheduled input[type='checkbox'] { display: inline-block; width: auto; margin: 0 7px 0 0; vertical-align: middle; }
+.timetable-unscheduled > div { margin: 10px 0; padding: 10px; border: 1px solid var(--dw-line); border-radius: 8px; }
+.focus-shell .focus-settings .unified-import-error { display: flex; gap: 6px; align-items: flex-start; margin: 8px 0 12px; padding: 0; background: transparent; color: var(--dw-warning); font-size: 10px; line-height: 1.6; }
+.unified-import-error svg { flex: 0 0 auto; margin-top: 2px; }
+.focus-shell .focus-settings .unified-import-input input[aria-invalid='true'] { border-color: var(--dw-warning); }
