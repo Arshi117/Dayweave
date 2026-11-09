@@ -165,7 +165,7 @@ function resetExample(){
   frame.hidden=false;closeMacMenu();syncMacToggle();desktop.dataset.dragging='false';desktop.dataset.dropReady='false';markExperience('focus');
   if(isMac()){frame.hidden=!state.macFloating;state.popupOpen=false;markExperience(state.macFloating?'floating':'dock');syncMacMode();}
   closeMacMenu();syncMacToggle();
-  $('#demo-loading').hidden=false;$('#demo-status').textContent='';frame.src='product-demo/index.html?surface=focus&reset='+Date.now();layout();
+  $('#demo-loading').hidden=false;$('#demo-status').textContent='';const resetUrl=new URL(frame.src);resetUrl.searchParams.set('reset',String(Date.now()));frame.src=resetUrl.href;layout();
   resetTimer=setTimeout(()=>{if(!state.ready)$('#demo-loading').textContent='加载较慢，请点击“重新开始”。';},12000);
 }
 function updateClock(){const now=new Date();const time=now.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});$('#desktop-clock').textContent=time;$('#desktop-date').textContent=now.toLocaleDateString('zh-CN');$('#mac-clock').textContent=now.toLocaleDateString('zh-CN',{month:'short',day:'numeric',weekday:'short'})+' '+time;$('#mac-dock-day').textContent=now.getDate();}

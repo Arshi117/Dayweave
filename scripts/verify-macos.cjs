@@ -27,7 +27,7 @@ app.on('browser-window-created',(_,win)=>{
     const evaluate=code=>win.webContents.executeJavaScript(code)
     const wait=async predicate=>{const until=Date.now()+10000;while(Date.now()<until){if(await evaluate(predicate))return;await new Promise(r=>setTimeout(r,50))}throw Error('macOS renderer check timed out')}
     try{
-      await wait('Boolean(window.focusControls && document.querySelector(".focus-pill"))')
+      await wait('Boolean(window.focusControls && document.querySelector(".focus-shell"))')
       await wait(process.platform === 'darwin' ? 'Boolean(document.querySelector(".focus-shell.is-menu-bar"))' : 'Boolean(document.querySelector(".focus-shell.is-docked"))')
       if(process.platform === 'darwin') {
         assert.equal(win.isVisible(),false)
@@ -42,6 +42,7 @@ app.on('browser-window-created',(_,win)=>{
       if(process.platform === 'darwin')win.webContents.send('focus:open-details')
       else await evaluate('document.querySelector(".focus-pull-handle").click()')
       await wait('Boolean(document.querySelector(".focus-details"))')
+      if(process.platform === 'darwin') assert.equal(await evaluate('Boolean(document.querySelector(".focus-strip"))'),false,'menu-bar popups must not repeat the floating strip')
       await wait('Boolean(document.querySelector(".focus-shell.opens-above")) === '+(process.platform === 'win32'))
       win.webContents.send('focus:open-calendar')
       await wait('Boolean(document.querySelector(".week-calendar"))')

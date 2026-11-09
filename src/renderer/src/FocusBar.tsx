@@ -82,11 +82,22 @@ export function FocusBar() {
   function collapse() { resetDetails(); if (placement.menuBar) window.focusControls?.hide() }
   function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false) }
   function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setAppearanceOpen(false); setSyncOpen(false) }
-  useEffect(() => window.focusControls?.onOutsideClick?.(() => {
-    if (document.querySelector('dialog[open], [aria-modal="true"]')) return
-    if (calendar) setCalendar(false)
-    else if (expanded) collapse()
-  }), [calendar, expanded, placement.menuBar])
+  useEffect(() => {
+    function dismissOutside() {
+      if (document.querySelector('dialog[open], [aria-modal="true"]')) return
+      if (calendar) setCalendar(false)
+      else if (expanded) collapse()
+    }
+    function backgroundPointerDown(event: globalThis.PointerEvent) {
+      if (event.button !== 0 || !(event.target instanceof Element)) return
+      // The shared window also covers transparent space beside the shorter
+      // panel. Treat that space as desktop, rather than swallowing its clicks.
+      if (!event.target.closest('.focus-strip, .focus-details, .focus-calendar-panel, .first-use-hint')) dismissOutside()
+    }
+    const off = window.focusControls?.onOutsideClick?.(dismissOutside)
+    document.addEventListener('pointerdown', backgroundPointerDown, true)
+    return () => { off?.(); document.removeEventListener('pointerdown', backgroundPointerDown, true) }
+  }, [calendar, expanded, placement.menuBar])
   useEffect(() => { if (expanded) hints.dismiss('pull') }, [expanded])
   useEffect(() => {
     if (expanded || hints.seen.move) return
@@ -267,7 +278,7 @@ export function FocusBar() {
       if (calendar) setCalendar(false); else collapse()
     }}>
     <div className="focus-sidebar">
-    <div className="focus-strip">
+    {!placement.menuBar && <div className="focus-strip">
     <section className={'focus-pill' + (problem ? ' has-problem' : '') + (window.focusControls?.manualStripDrag ? ' manual-drag' : '')} aria-label="当前安排悬浮条" title={placement.menuBar ? '按住拖到桌面，变为悬浮条' : '按住小条拖动；点击或拉动边缘细横线展开'} onPointerDown={event => {
       if (event.button !== 0 || !window.focusControls?.manualStripDrag || (event.target as Element).closest('button,input,select,a,[role="button"]')) return
       event.preventDefault(); window.focusControls.beginStripDrag?.()
@@ -284,8 +295,8 @@ export function FocusBar() {
       <button className="focus-pull-handle" title={showDetails ? '向回推或点击收起' : placement.above ? '拉动上沿或点击展开' : '拉动下沿或点击展开'} aria-label={showDetails ? '收起当前安排' : '拉开当前安排'} aria-expanded={showDetails}
         onPointerDown={pullStart} onPointerMove={pullMove} onPointerUp={pullEnd} onPointerCancel={() => { pull.current = null }} onLostPointerCapture={() => { pull.current = null }}
         onClick={event => { if (event.detail === 0) { if (expanded) collapse(); else setExpanded(true) } }}><span /></button>
-    </div>
-    {!placement.menuBar && !hints.seen.move ? <FirstUseHint kind="move" onDismiss={() => hints.dismiss('move')} /> : !expanded && !hints.seen.pull ? <FirstUseHint kind="pull" onDismiss={() => hints.dismiss('pull')} /> : null}
+    </div>}
+    {!placement.menuBar && (!hints.seen.move ? <FirstUseHint kind="move" onDismiss={() => hints.dismiss('move')} /> : !expanded && !hints.seen.pull ? <FirstUseHint kind="pull" onDismiss={() => hints.dismiss('pull')} /> : null)}
     {showDetails && <section id="focus-details" className="focus-details" aria-label={appearanceOpen ? '外观设置' : settings ? '连接与导入' : '当前安排详情'}>
       <header className="focus-details-header">
         {(settings || appearanceOpen) && <button title="返回当前安排" aria-label="返回当前安排" onClick={() => { setSettings(false); setAppearanceOpen(false) }}><ArrowLeft size={14} /></button>}
