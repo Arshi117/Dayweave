@@ -53,6 +53,8 @@ declare global {
   interface Window {
     focusControls?: {
       hide: () => void
+      setMenuBarStatus?: (status: import('../../shared/focus-menu').FocusMenuStatus) => void
+      onOpenDetails?: (listener: () => void) => () => void
       resize: (height: number, calendar?: boolean, expanded?: boolean) => void
       beginDimensionResize: (target: import('../../shared/focus-window-layout').ResizeTarget, edge: import('../../shared/focus-window-layout').ResizeEdge) => void
       moveDimensionResize: () => void

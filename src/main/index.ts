@@ -1,4 +1,4 @@
-import { app, globalShortcut, Menu, nativeImage, screen, Tray } from 'electron'
+import { app, globalShortcut, Menu, nativeImage, screen, Tray, type MenuItemConstructorOptions } from 'electron'
 import { isAbsolute, join } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { FocusWindow } from './focus-window'
@@ -14,6 +14,25 @@ const profile = app.commandLine.getSwitchValue('user-data-dir')
 const profileDirectory = profile && isAbsolute(profile) ? profile : join(app.getPath('appData'), development ? 'dayweave-dev' : 'dayweave-desktop')
 mkdirSync(profileDirectory, { recursive: true })
 app.setPath('userData', profileDirectory)
+
+function trayMenu() {
+  const items: MenuItemConstructorOptions[] = []
+  if (process.platform === 'darwin') items.push(
+    { label: '左下角停靠', type: 'radio', checked: !focus?.isMenuBarMode(), click: () => focus?.dockToBottom() },
+    { label: '顶部菜单栏', type: 'radio', checked: focus?.isMenuBarMode() ?? false, click: () => focus?.useMenuBar() },
+    { type: 'separator' },
+  )
+  items.push({ label: '显示／隐藏悬浮条', click: () => focus?.toggle() })
+  if (process.platform === 'win32') items.push({ label: '停靠到底部', click: () => focus?.dockToBottom() })
+  if (process.platform === 'darwin') items.push({ label: '始终置顶', type: 'checkbox', checked: focus?.isAlwaysOnTop() ?? true, click: item => focus?.setAlwaysOnTop(item.checked) })
+  items.push(
+    { label: '展开日历', click: () => focus?.openCalendar() },
+    { label: '连接与导入', click: () => focus?.openSettings() },
+    { type: 'separator' },
+    { label: '退出 Dayweave', click: () => app.quit() },
+  )
+  return Menu.buildFromTemplate(items)
+}
 
 function createTray() {
   const size = 32, pixels = Buffer.alloc(size * size * 4)
@@ -40,16 +59,20 @@ function createTray() {
   }
   tray = new Tray(image)
   tray.setToolTip((development ? 'Dayweave 开发版' : 'Dayweave') + ' · 当前安排')
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '显示／隐藏悬浮条', click: () => focus?.toggle() },
-    ...(process.platform === 'win32' ? [{ label: '停靠到底部', click: () => focus?.dockToBottom() }] : []),
-    { label: '展开日历', click: () => focus?.openCalendar() },
-    { label: '连接与导入', click: () => focus?.openSettings() },
-    { type: 'separator' },
-    { label: '退出 Dayweave', click: () => app.quit() },
-  ]))
-  if (process.platform !== 'darwin') tray.on('click', () => focus?.toggle())
-  tray.on('double-click', () => focus?.openCalendar())
+  if (process.platform === 'darwin') {
+    tray.setIgnoreDoubleClickEvents(true)
+    focus?.setMenuBarAnchor(() => tray?.getBounds())
+    focus?.onMenuStatus(status => {
+      tray?.setTitle(focus?.isMenuBarMode() ? status.timer : '', { fontType: 'monospacedDigit' })
+      tray?.setToolTip('Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : '') + (focus?.isMenuBarMode() ? '\n右键切换停靠位置' : ''))
+    })
+    tray.on('click', () => { if (focus?.isMenuBarMode()) focus.toggleFromMenuBar(); else tray?.popUpContextMenu(trayMenu()) })
+    tray.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
+  } else {
+    tray.setContextMenu(trayMenu())
+    tray.on('click', () => focus?.toggle())
+    tray.on('double-click', () => focus?.openCalendar())
+  }
 }
 
 if (!app.requestSingleInstanceLock()) app.quit()
@@ -62,8 +85,8 @@ else {
       app.dock?.hide()
     }
     focus = new FocusWindow(app.getPath('userData'), join(__dirname, '../preload/index.js'))
-    createTray()
     await focus.create()
+    createTray()
     globalShortcut.register('CommandOrControl+Alt+F', () => focus?.toggle())
     globalShortcut.register('CommandOrControl+Alt+D', () => focus?.openCalendar())
     const fit = () => focus?.keepVisible()

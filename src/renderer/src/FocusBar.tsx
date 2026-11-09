@@ -78,7 +78,7 @@ export function FocusBar() {
   const shell = useRef<HTMLElement>(null)
   const pull = useRef<{ id: number; y: number; moved: boolean; direction: number } | null>(null)
   const showDetails = expanded
-  function collapse() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false) }
+  function collapse() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false); if (placement.menuBar) window.focusControls?.hide() }
   function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false) }
   function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setAppearanceOpen(false); setSyncOpen(false) }
   useEffect(() => { if (expanded) hints.dismiss('pull') }, [expanded])
@@ -114,10 +114,11 @@ export function FocusBar() {
     if (!current.moved) { if (expanded) collapse(); else setExpanded(true) }
   }
   useEffect(() => {
+    const offDetails = window.focusControls?.onOpenDetails?.(() => { setExpanded(true); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false) })
     const offPlacement = window.focusControls?.onPlacement(setPlacement)
     const offCalendar = window.focusControls?.onOpenCalendar(openCalendar)
     const offSettings = window.focusControls?.onOpenSettings(() => openConnections())
-    return () => { offPlacement?.(); offCalendar?.(); offSettings?.() }
+    return () => { offDetails?.(); offPlacement?.(); offCalendar?.(); offSettings?.() }
   }, [])
   useLayoutEffect(() => {
     if (!shell.current) return
@@ -249,6 +250,9 @@ export function FocusBar() {
   const upcomingConflicts = view.conflicts.filter(event => event.start > now)
   const focusNote = upcomingConflicts.length ? '将与“' + upcomingConflicts[0].title + '”时间重叠' : ''
   const remainingTime = countdown(view.current ? view.end - now : 0)
+  const stripTitle = view.current?.title ?? selectedTask?.title ?? view.next?.title ?? '暂时空闲'
+  const menuTimer = view.current ? remainingTime : ''
+  useEffect(() => { window.focusControls?.setMenuBarStatus?.({ title: stripTitle.slice(0, 500), timer: menuTimer }) }, [stripTitle, menuTimer])
   const problem = error || activeFeed.error
   return <main ref={shell} data-appearance={appearance} style={{ '--focus-details-max': Math.max(120, placement.availableHeight - 64) + 'px', '--focus-sidebar-width': Math.max(FOCUS_WIDTH, dimensions.stripWidth) - 12 + 'px' } as CSSProperties} className={'focus-shell' + (expanded ? ' is-expanded' : '') + (settings || appearanceOpen ? ' is-settings' : '') + (calendar ? ' has-calendar' : '') + (placement.left ? ' calendar-left' : '') + (placement.above ? ' opens-above' : '') + (placement.docked ? ' is-docked' : '')}
     onKeyDown={event => {

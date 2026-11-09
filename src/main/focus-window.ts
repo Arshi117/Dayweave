@@ -7,7 +7,8 @@ import { MicrosoftTodoConnection } from './microsoft-todo'
 import { CalendarLinks } from './calendar-links'
 import { createTaskbarProbe } from './taskbar-visibility'
 import { shouldRecoverDock } from '../shared/dock-visibility'
-import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, bottomDockLayout, isBottomDockCandidate, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
+import { readFocusMenuStatus, type FocusMenuStatus } from '../shared/focus-menu'
+import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, platformDockLayout, menuBarWindowLayout, isBottomDockCandidate, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
 
 interface DimensionGesture { target: ResizeTarget; edge: ResizeEdge; x: number; y: number; dimensions: FocusDimensions; anchor: FocusAnchor; left: boolean; above: boolean }
 const resizeEdges: ResizeEdge[] = ['left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
@@ -30,7 +31,13 @@ export class FocusWindow {
   private left = false
   private applyingBounds = false
   private appliedPosition: FocusAnchor | null = null
-  private docked = process.platform === 'win32'
+  private docked = process.platform === 'win32' || process.platform === 'darwin'
+  private alwaysOnTop = true
+  private menuBar = false
+  private menuBarBlurredAt = 0
+  private menuBarBounds: (() => Electron.Rectangle | undefined) | null = null
+  private menuStatus: FocusMenuStatus = { title: 'Dayweave', timer: '' }
+  private statusListener: ((status: FocusMenuStatus) => void) | null = null
   private nativeMoving = false
   private dockVisibilityTimer: NodeJS.Timeout | null = null
   private readonly settingsFile: string
@@ -42,6 +49,11 @@ export class FocusWindow {
     this.microsoft = new MicrosoftTodoConnection(directory, state => this.window?.webContents.send('focus:microsoft-state', state))
     this.links = new CalendarLinks(directory, state => this.window?.webContents.send('focus:links-state', state))
     const allowed = (id: number) => this.window?.webContents.id === id
+    ipcMain.on('focus:menu-status', (event, value: unknown) => {
+      if (process.platform !== 'darwin' || !allowed(event.sender.id)) return
+      const status = readFocusMenuStatus(value)
+      if (status) { this.menuStatus = status; this.statusListener?.(status) }
+    })
     ipcMain.handle('focus:subscription-state', event => allowed(event.sender.id) ? this.feed.state() : null)
     ipcMain.handle('focus:subscription-save', (event, value: unknown) => {
       if (!allowed(event.sender.id) || typeof value !== 'string') return null
@@ -126,23 +138,26 @@ export class FocusWindow {
     try {
       const saved = JSON.parse(readFileSync(this.settingsFile, 'utf8'))
       if (Number.isFinite(saved.x) && Number.isFinite(saved.y)) { x = saved.x; y = saved.y }
-      this.docked = process.platform === 'win32' && saved.docked !== false
+      this.docked = this.docked && saved.docked !== false
+      this.alwaysOnTop = process.platform !== 'darwin' || saved.alwaysOnTop !== false
+      this.menuBar = process.platform === 'darwin' && saved.menuBar === true
       this.dimensions = focusDimensions(saved)
-    } catch { /* Start near the top right on first use. */ }
+    } catch { /* Use the platform's default placement on first use. */ }
     this.anchor = { x, y }
     const window = new BrowserWindow({ x, y, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT, title: (process.env.DAYWEAVE_DEV === '1' ? 'Dayweave 开发版' : 'Dayweave') + ' · 当前安排', show: false,
-      frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false, alwaysOnTop: true,
+      frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false, alwaysOnTop: this.alwaysOnTop,
       resizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, autoHideMenuBar: true,
       webPreferences: { preload: this.preload, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } })
     this.window = window
     if (process.platform === 'darwin') {
-      window.setAlwaysOnTop(true, 'floating')
+      window.setAlwaysOnTop(this.alwaysOnTop, 'floating')
       window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
     }
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.webContents.on('will-navigate', event => event.preventDefault())
     window.on('page-title-updated', event => event.preventDefault())
     window.on('will-move', () => {
+      if (this.menuBar) { this.menuBar = false; this.statusListener?.(this.menuStatus) }
       this.nativeMoving = true
       this.docked = false
     })
@@ -154,9 +169,11 @@ export class FocusWindow {
       if (this.positionTimer) clearTimeout(this.positionTimer)
       this.positionTimer = setTimeout(() => { if (this.nativeMoving) this.finishNativeMove(); else this.savePosition() }, 300)
     })
-    window.on('moved', () => { if (this.nativeMoving) this.finishNativeMove() })
+    // On macOS `moved` aliases every `move`, rather than ending the drag.
+    // Let the quiet-period timer finish it so snapping does not fight each move.
+    window.on('moved', () => { if (process.platform !== 'darwin' && this.nativeMoving) this.finishNativeMove() })
     window.on('close', event => { event.preventDefault(); window.hide() })
-    window.on('blur', () => this.finishDimensionResize())
+    window.on('blur', () => { this.finishDimensionResize(); if (this.menuBar) { this.menuBarBlurredAt = Date.now(); window.hide() } })
     window.webContents.on('render-process-gone', () => { if (!window.isDestroyed()) window.reload() })
     if (process.env.ELECTRON_RENDERER_URL) {
       const url = new URL(process.env.ELECTRON_RENDERER_URL)
@@ -165,7 +182,7 @@ export class FocusWindow {
     } else await window.loadFile(join(__dirname, '../renderer/index.html'), { query: { surface: 'focus' } })
     this.keepVisible()
     await Promise.all([this.feed.load(), this.google.load(), this.ticktick.load(), this.microsoft.load(), this.links.load()])
-    this.show()
+    if (!this.menuBar) this.show()
     if (process.platform === 'win32') {
       try {
         const probe = createTaskbarProbe(window)
@@ -184,23 +201,49 @@ export class FocusWindow {
   private savePosition() {
     if (!this.window || this.window.isDestroyed()) return
     const { x, y } = this.anchor
-    try { writeFileSync(this.settingsFile, JSON.stringify({ x, y, docked: this.docked, ...this.dimensions }), 'utf8') } catch { /* Movement and resizing remain usable for this session. */ }
+    try { writeFileSync(this.settingsFile, JSON.stringify({ x, y, docked: this.docked, alwaysOnTop: this.alwaysOnTop, menuBar: this.menuBar, ...this.dimensions }), 'utf8') } catch { /* Movement and resizing remain usable for this session. */ }
   }
   private finishNativeMove() {
     if (!this.window || this.window.isDestroyed()) return
     this.nativeMoving = false
     if (this.positionTimer) { clearTimeout(this.positionTimer); this.positionTimer = null }
     const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
-    this.docked = process.platform === 'win32' && isBottomDockCandidate(this.anchor, display.workArea)
+    this.docked = (process.platform === 'win32' || process.platform === 'darwin') && isBottomDockCandidate(this.anchor, display.workArea)
     this.keepVisible()
     this.savePosition()
   }
   dockToBottom() {
-    if (process.platform !== 'win32') return
+    if (process.platform !== 'win32' && process.platform !== 'darwin') return
+    this.menuBar = false
     this.docked = true
     this.keepVisible()
     this.savePosition()
     this.window?.showInactive()
+    this.statusListener?.(this.menuStatus)
+  }
+  isMenuBarMode() { return this.menuBar }
+  toggleFromMenuBar() {
+    // Clicking the status item can blur and hide the panel before `click` fires.
+    if (this.menuBar && Date.now() - this.menuBarBlurredAt < 200) return
+    this.toggle()
+  }
+  setMenuBarAnchor(provider: () => Electron.Rectangle | undefined) { this.menuBarBounds = provider; if (this.menuBar) this.keepVisible() }
+  onMenuStatus(listener: (status: FocusMenuStatus) => void) { this.statusListener = listener; listener(this.menuStatus) }
+  useMenuBar() {
+    if (process.platform !== 'darwin') return
+    this.finishDimensionResize()
+    this.menuBar = true
+    this.keepVisible()
+    this.savePosition()
+    this.window?.hide()
+    this.statusListener?.(this.menuStatus)
+  }
+  isAlwaysOnTop() { return this.alwaysOnTop }
+  setAlwaysOnTop(value: boolean) {
+    if (process.platform !== 'darwin') return
+    this.alwaysOnTop = value
+    this.window?.setAlwaysOnTop(value, 'floating')
+    this.savePosition()
   }
   private validResize(target: unknown, edge: unknown) {
     return typeof edge === 'string' && resizeEdges.includes(edge as ResizeEdge) && (target === 'strip' ? !this.expanded && (edge === 'left' || edge === 'right') : target === 'calendar' && this.calendarOpen)
@@ -209,7 +252,9 @@ export class FocusWindow {
     const point = screen.getCursorScreenPoint()
     const dimensions = { ...this.dimensions }
     if (target === 'calendar' && this.window) dimensions.calendarWidth = this.window.getContentBounds().width - Math.max(FOCUS_WIDTH, dimensions.stripWidth) - FOCUS_GAP
-    return { target, edge, x: point.x, y: point.y, dimensions, anchor: { ...this.anchor }, left: this.left, above: this.above }
+    const bounds = this.window?.getContentBounds()
+    const anchor = this.menuBar && bounds ? { x: bounds.x + (this.left ? bounds.width - dimensions.stripWidth : 0), y: bounds.y } : { ...this.anchor }
+    return { target, edge, x: point.x, y: point.y, dimensions, anchor, left: this.left, above: this.above }
   }
   private applyDimensions(gesture: DimensionGesture, dx: number, dy: number) {
     const area = screen.getDisplayMatching({ ...gesture.anchor, width: gesture.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT }).workArea
@@ -219,8 +264,10 @@ export class FocusWindow {
       ? { ...gesture.dimensions, stripWidth: Math.min(area.width, gesture.dimensions.stripWidth + horizontal) }
       : { ...gesture.dimensions, calendarWidth: Math.min(Math.max(400, area.width - Math.max(FOCUS_WIDTH, gesture.dimensions.stripWidth) - FOCUS_GAP), gesture.dimensions.calendarWidth + horizontal), calendarHeight: Math.min(area.height - FOCUS_PADDING, gesture.dimensions.calendarHeight + vertical) }
     this.dimensions = focusDimensions(requested)
-    this.anchor = { ...gesture.anchor }
-    if (gesture.target === 'strip' && gesture.edge === 'left') this.anchor.x += gesture.dimensions.stripWidth - this.dimensions.stripWidth
+    if (!this.menuBar) {
+      this.anchor = { ...gesture.anchor }
+      if (gesture.target === 'strip' && gesture.edge === 'left') this.anchor.x += gesture.dimensions.stripWidth - this.dimensions.stripWidth
+    }
     this.keepVisible()
   }
   private finishDimensionResize() {
@@ -230,19 +277,22 @@ export class FocusWindow {
   }
   keepVisible() {
     if (!this.window || this.window.isDestroyed()) return
-    const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
+    const tray = this.menuBar ? this.menuBarBounds?.() : undefined
+    const display = screen.getDisplayMatching(tray ?? { ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
     const area = display.workArea
     const sidebarWidth = this.expanded ? Math.max(FOCUS_WIDTH, this.dimensions.stripWidth) : this.dimensions.stripWidth
     const width = sidebarWidth + (this.calendarOpen ? FOCUS_GAP + this.dimensions.calendarWidth : 0)
-    const layout = this.docked
-      ? bottomDockLayout(this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth)
+    const layout = this.menuBar
+      ? menuBarWindowLayout(tray ?? { x: area.x + area.width - 24, y: area.y, width: 24, height: 0 }, this.contentHeight, area, width, this.dimensions.stripWidth)
+      : this.docked
+      ? platformDockLayout(process.platform, this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth)
       : focusWindowLayout(this.anchor, this.contentHeight, area, width, this.dimensions.stripWidth, this.dimensionGesture?.left, this.dimensionGesture?.above ?? false)
-    this.anchor = layout.anchor
+    if (!this.menuBar) this.anchor = layout.anchor
     this.above = layout.above
     this.left = layout.left
     if (process.platform === 'win32') this.window.setAlwaysOnTop(true, this.docked ? 'pop-up-menu' : 'floating')
-    const availableHeight = this.docked ? this.anchor.y - display.bounds.y + FOCUS_COMPACT_HEIGHT : area.height
-    this.window.webContents.send('focus:placement', { above: this.above, left: this.left, docked: this.docked, availableHeight, availableWidth: area.width, dimensions: this.dimensions })
+    const availableHeight = this.menuBar ? area.y + area.height - layout.anchor.y : this.docked ? this.anchor.y - (process.platform === 'darwin' ? area.y : display.bounds.y) + FOCUS_COMPACT_HEIGHT : area.height
+    this.window.webContents.send('focus:placement', { above: this.above, left: this.left, docked: !this.menuBar && this.docked, menuBar: this.menuBar, availableHeight, availableWidth: area.width, dimensions: this.dimensions })
     const current = this.window.getContentBounds()
     if (current.x === layout.bounds.x && current.y === layout.bounds.y && current.width === layout.bounds.width && current.height === layout.bounds.height) return
     this.applyingBounds = true
@@ -252,7 +302,12 @@ export class FocusWindow {
       this.appliedPosition = { x: bounds.x, y: bounds.y }
     } finally { this.applyingBounds = false }
   }
-  show() { if (this.window && !this.window.isDestroyed()) { this.keepVisible(); this.window.showInactive() } }
+  show() {
+    if (!this.window || this.window.isDestroyed()) return
+    this.keepVisible()
+    if (this.menuBar) { this.window.webContents.send('focus:open-details'); this.window.show() }
+    else this.window.showInactive()
+  }
   toggle() { if (this.window?.isVisible()) this.window.hide(); else this.show() }
   openCalendar() { this.show(); this.window?.webContents.send('focus:open-calendar') }
   openSettings() { this.show(); this.window?.webContents.send('focus:open-settings') }

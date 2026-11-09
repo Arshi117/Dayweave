@@ -7,7 +7,7 @@ export interface FocusDimensions { stripWidth: number; calendarWidth: number; ca
 export type ResizeTarget = 'strip' | 'calendar'
 export type ResizeEdge = 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 export const DEFAULT_FOCUS_DIMENSIONS: FocusDimensions = { stripWidth: FOCUS_WIDTH, calendarWidth: FOCUS_CALENDAR_WIDTH - FOCUS_WIDTH - FOCUS_GAP, calendarHeight: 620 }
-export interface FocusPlacement { above: boolean; left: boolean; availableHeight: number; availableWidth?: number; dimensions?: FocusDimensions; docked?: boolean }
+export interface FocusPlacement { above: boolean; left: boolean; availableHeight: number; availableWidth?: number; dimensions?: FocusDimensions; docked?: boolean; menuBar?: boolean }
 export interface FocusAnchor { x: number; y: number }
 interface Area { x: number; y: number; width: number; height: number }
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value))
@@ -26,6 +26,18 @@ export function isBottomDockCandidate(anchor: FocusAnchor, workArea: Area) {
 export function bottomDockLayout(requestedHeight: number, bounds: Area, workArea: Area, requestedWidth = FOCUS_WIDTH, compactWidth = FOCUS_WIDTH) {
   const anchor = bottomDockAnchor(bounds, workArea, compactWidth)
   return focusWindowLayout(anchor, Math.min(requestedHeight, anchor.y - bounds.y + FOCUS_COMPACT_HEIGHT), bounds, requestedWidth, compactWidth, undefined, true)
+}
+// macOS reserves space for both its menu bar and system Dock. Keep the entire
+// window in that work area; only Windows may occupy the taskbar region.
+export function platformDockLayout(platform: string, requestedHeight: number, bounds: Area, workArea: Area, requestedWidth = FOCUS_WIDTH, compactWidth = FOCUS_WIDTH) {
+  if (platform !== 'darwin') return bottomDockLayout(requestedHeight, bounds, workArea, requestedWidth, compactWidth)
+  const anchor = bottomDockAnchor(workArea, workArea, compactWidth)
+  return focusWindowLayout(anchor, requestedHeight, workArea, requestedWidth, compactWidth, false, true)
+}
+export function menuBarWindowLayout(tray: Area, requestedHeight: number, workArea: Area, requestedWidth = FOCUS_WIDTH, compactWidth = FOCUS_WIDTH) {
+  const bottom = workArea.y + workArea.height
+  const anchor = { x: tray.x + tray.width - compactWidth, y: clamp(tray.y + tray.height + 6, workArea.y, bottom - Math.min(FOCUS_COMPACT_HEIGHT, workArea.height)) }
+  return focusWindowLayout(anchor, Math.min(requestedHeight, bottom - anchor.y), workArea, requestedWidth, compactWidth, true, false)
 }
 export function focusDimensions(value: Partial<FocusDimensions> = {}): FocusDimensions {
   const size = (key: keyof FocusDimensions, low: number, high: number) => {

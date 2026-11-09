@@ -1,5 +1,12 @@
 # Release notes
 
+## Unreleased
+
+- Offer two Mac placements: a persistent bottom-left strip or a menu-bar countdown with an on-demand arrangement panel. Remember the mode, preserve desktop bounds and dismiss the menu-bar panel on focus loss.
+- Add macOS bottom-left docking above the system Dock, with a menu-bar command, bottom-edge snapping, upward expansion and saved placement. Preserve existing floating profiles.
+- Add a saved macOS **始终置顶** toggle so the strip can follow normal application stacking.
+- Avoid treating each macOS `moved` event as the end of a drag; validate Mac work-area layouts and controller persistence, and extend the packaged Mac smoke check.
+
 ## 0.1.2 — 2026-11-08
 
 Second public GitHub release. Consolidates the intermediate local test builds.

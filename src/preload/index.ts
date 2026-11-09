@@ -7,6 +7,12 @@ import type { CalendarLinksState } from '../shared/import-links'
 
 contextBridge.exposeInMainWorld('focusControls', {
   hide: () => ipcRenderer.send('focus:hide'),
+  setMenuBarStatus: (status: import('../shared/focus-menu').FocusMenuStatus) => ipcRenderer.send('focus:menu-status', status),
+  onOpenDetails: (listener: () => void) => {
+    const handler = () => listener()
+    ipcRenderer.on('focus:open-details', handler)
+    return () => ipcRenderer.removeListener('focus:open-details', handler)
+  },
   resize: (height: number, calendar = false, expanded = false) => ipcRenderer.send('focus:resize', height, calendar, expanded),
   beginDimensionResize: (target: ResizeTarget, edge: ResizeEdge) => ipcRenderer.send('focus:dimension-start', target, edge),
   moveDimensionResize: () => ipcRenderer.send('focus:dimension-move'),
