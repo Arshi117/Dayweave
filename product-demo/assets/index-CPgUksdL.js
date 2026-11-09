@@ -14443,6 +14443,7 @@ function extendFocus(current, end, now) {
 const FOCUS_WIDTH = 300;
 const DEFAULT_FOCUS_DIMENSIONS = { stripWidth: FOCUS_WIDTH, calendarHeight: 620 };
 const HOUR_HEIGHT = 72;
+const EVENT_LABEL_HEIGHT = 22;
 const DAY_MINUTES = 1440;
 const COLORS = [
   { id: "blue", name: "蓝色", rgb: "42, 126, 222" },
@@ -14485,20 +14486,26 @@ function colorRgb(color) {
   return (COLORS.find((item) => item.id === color) ?? COLORS[0]).rgb;
 }
 function calendarEventLayout(start, end) {
-  const height = Math.max(0, end - start) / 60 * HOUR_HEIGHT;
-  const density = height < 16 ? "marker" : height < 48 ? "compact" : height < 64 ? "standard" : "full";
-  return { height, density, showTime: height >= 48, showLocation: height >= 84 };
+  const durationHeight = Math.max(0, end - start) / 60 * HOUR_HEIGHT;
+  const height = Math.max(EVENT_LABEL_HEIGHT, durationHeight);
+  const top = Math.min(start / 60 * HOUR_HEIGHT, DAY_MINUTES / 60 * HOUR_HEIGHT - height);
+  const density = height < 48 ? "compact" : height < 64 ? "standard" : "full";
+  return { top, height, durationHeight, durationOffset: start / 60 * HOUR_HEIGHT - top, density, showTime: height >= 48, showLocation: height >= 84 };
 }
-function layoutDay(entries) {
+function layoutDay(entries, minimumHeight = 0) {
+  const interval = (entry) => {
+    const start = Math.min(toMinutes(entry.startTime), DAY_MINUTES - minimumHeight / HOUR_HEIGHT * 60);
+    return { start, end: Math.max(toMinutes(entry.endTime), start + minimumHeight / HOUR_HEIGHT * 60) };
+  };
   const sorted = [...entries].sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime) || toMinutes(b.endTime) - toMinutes(a.endTime) || a.id.localeCompare(b.id));
   const output = [];
   let group = [], ends = [], groupEnd = -1;
   const flush = () => {
     for (const item of group) {
-      const start = toMinutes(item.entry.startTime), end = toMinutes(item.entry.endTime);
+      const { start, end } = interval(item.entry);
       let laneSpan = 1;
       for (let lane = item.lane + 1; lane < ends.length; lane++) {
-        if (group.some((other) => other.lane === lane && toMinutes(other.entry.startTime) < end && toMinutes(other.entry.endTime) > start)) break;
+        if (group.some((other) => other.lane === lane && interval(other.entry).start < end && interval(other.entry).end > start)) break;
         laneSpan++;
       }
       output.push({ ...item, laneCount: ends.length, laneSpan });
@@ -14507,7 +14514,7 @@ function layoutDay(entries) {
     ends = [];
   };
   for (const entry of sorted) {
-    const start = toMinutes(entry.startTime), end = toMinutes(entry.endTime);
+    const { start, end } = interval(entry);
     if (start >= groupEnd) flush();
     let lane = ends.findIndex((lastEnd) => lastEnd <= start);
     if (lane < 0) lane = ends.length;
@@ -14757,32 +14764,34 @@ function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly = false
       ] }, hour)) }),
       days.map((day, index) => {
         const key = dateKey(day);
-        const events = layoutDay(entries.filter((entry) => entry.date === key));
+        const events = layoutDay(entries.filter((entry) => entry.date === key), EVENT_LABEL_HEIGHT);
         const currentMinute = now.getHours() * 60 + now.getMinutes();
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "day-column", "aria-label": key + "的时间安排", onPointerDown: (event) => begin(event, index, "create"), onContextMenu: (event) => openCreateMenu(event, index), onDragOver: (event) => dragTask(event, index), onDrop: (event) => dropTask(event, index), children: [
           events.map(({ entry, lane, laneCount, laneSpan }) => {
             const presentation = calendarEventLayout(toMinutes(entry.startTime), toMinutes(entry.endTime));
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { "data-density": presentation.density, "aria-label": entry.title + " " + entry.startTime + " – " + entry.endTime, className: "calendar-event" + (entry.readOnly ? " is-subscribed" : "") + (gesture?.entry?.id === entry.id && gesture.moved ? " being-dragged" : ""), style: {
-              top: toMinutes(entry.startTime) / 60 * HOUR_HEIGHT,
+              top: presentation.top,
               height: presentation.height,
               left: "calc(" + lane / laneCount * 100 + "% + 3px)",
               width: "calc(" + 100 * laneSpan / laneCount + "% - 6px)",
-              "--event-rgb": colorRgb(entry.color)
+              "--event-rgb": colorRgb(entry.color),
+              "--duration-height": Math.max(1, presentation.durationHeight) + "px",
+              "--duration-offset": presentation.durationOffset + "px"
             }, tabIndex: readOnly ? -1 : 0, title: entry.title + (entry.sourceTitle ? "\n原名称：" + entry.sourceTitle : "") + "\n" + entry.startTime + " – " + entry.endTime + (entry.location ? "\n" + entry.location : "") + (entry.readOnly ? "\n来自订阅日历 · 只读" : "") + (readOnly ? "" : "\n右键可在同一时段新建日程"), onContextMenu: (event) => openCreateMenu(event, index, entry), onPointerDown: (event) => begin(event, index, "move", entry), onClick: (event) => {
               if (!readOnly && (entry.readOnly || event.detail === 0)) onEdit(entry);
             }, children: [
-              presentation.density !== "marker" && /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: entry.title }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: entry.title }),
               presentation.showTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                 entry.startTime,
                 " – ",
                 entry.endTime
               ] }),
               presentation.showLocation && entry.location && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { title: entry.location, children: entry.location }),
-              !readOnly && !entry.readOnly && presentation.density !== "marker" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "event-resize", title: "拖动调整结束时间", onPointerDown: (event) => begin(event, index, "resize", entry) })
+              !readOnly && !entry.readOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "event-resize", title: "拖动调整结束时间", onPointerDown: (event) => begin(event, index, "resize", entry) })
             ] }, entry.id);
           }),
           key === today && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "now-line", style: { top: currentMinute / 60 * HOUR_HEIGHT }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", {}) }),
-          gesture?.day === index && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "selection-block", "data-density": calendarEventLayout(gesture.start, gesture.end).density, style: { top: gesture.start / 60 * HOUR_HEIGHT, height: (gesture.end - gesture.start) / 60 * HOUR_HEIGHT }, children: [
+          gesture?.day === index && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "selection-block", "data-density": calendarEventLayout(gesture.start, gesture.end).density, style: { top: calendarEventLayout(gesture.start, gesture.end).top, height: calendarEventLayout(gesture.start, gesture.end).height }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: gesture.entry?.title ?? "新日程" }),
             calendarEventLayout(gesture.start, gesture.end).showTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               timeLabel(gesture.start),
@@ -15689,7 +15698,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-D5IQHcvQ.js"), true ? [] : void 0, import.meta.url));
+const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-B1nKWNzn.js"), true ? [] : void 0, import.meta.url));
 function CalendarFileImport({ replaceId, initialPdf, onState, onDone }) {
   const [preview, setPreview] = reactExports.useState(null);
   const [pdf, setPdf] = reactExports.useState(initialPdf || null);
@@ -16291,6 +16300,11 @@ function FocusBar() {
     setAppearanceOpen(false);
     setSyncOpen(false);
   }
+  reactExports.useEffect(() => window.focusControls?.onOutsideClick?.(() => {
+    if (document.querySelector('dialog[open], [aria-modal="true"]')) return;
+    if (calendar) setCalendar(false);
+    else if (expanded) collapse();
+  }), [calendar, expanded, placement.menuBar]);
   reactExports.useEffect(() => {
     if (expanded) hints.dismiss("pull");
   }, [expanded]);
@@ -16535,7 +16549,11 @@ function FocusBar() {
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-sidebar", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-strip", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "focus-pill" + (problem ? " has-problem" : ""), "aria-label": "当前安排悬浮条", title: placement.menuBar ? "当前安排" : "按住小条拖动；点击或拉动边缘细横线展开", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "focus-pill" + (problem ? " has-problem" : "") + (window.focusControls?.manualStripDrag ? " manual-drag" : ""), "aria-label": "当前安排悬浮条", title: placement.menuBar ? "按住拖到桌面，变为悬浮条" : "按住小条拖动；点击或拉动边缘细横线展开", onPointerDown: (event) => {
+              if (event.button !== 0 || !window.focusControls?.manualStripDrag || event.target.closest('button,input,select,a,[role="button"]')) return;
+              event.preventDefault();
+              window.focusControls.beginStripDrag?.();
+            }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "focus-pill-marker" + (view.current ? " is-active" : ""), children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "focus-status-badge", children: view.current ? /* @__PURE__ */ jsxRuntimeExports.jsx(Clock3, { size: 12, strokeWidth: 1.7 }) : selectedTask ? /* @__PURE__ */ jsxRuntimeExports.jsx(ListTodo, { size: 12, strokeWidth: 1.7 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CalendarDays, { size: 12, strokeWidth: 1.7 }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-pill-summary", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "focus-pill-title", title: view.current?.title ?? selectedTask?.title ?? view.next?.title, children: view.current?.title ?? selectedTask?.title ?? view.next?.title ?? "暂时空闲" }),

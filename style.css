@@ -19,4 +19,5 @@ dialog{width:min(440px,calc(100% - 32px));padding:36px;border:1px solid #e3e8e4;
 .mac-menu-right{min-width:0}.mac-tray-button{min-width:0;max-width:100%}.mac-tray-button>svg{flex:none}.mac-tray-button .mac-tray-title{min-width:0;max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mac-tray-button #mac-tray-timer{flex:none}.mac-menubar .mac-system-menu{flex:none}.app-preview[data-platform=mac] .dock-target{display:none}
 @media(max-width:760px){.mac-tray-button .mac-tray-title{max-width:clamp(50px,25vw,120px)}}
 @media(max-width:420px){.mac-menu-right time{display:none}}
+.mac-tray-button{cursor:grab;touch-action:none;user-select:none}.app-preview[data-platform=mac][data-drop-ready=true] .mac-menubar{background:#e4f0e8e8;box-shadow:inset 0 -2px #799b88}.app-preview[data-platform=mac][data-drop-ready=true] .mac-tray-button{outline:2px solid #799b88;outline-offset:-2px}
 @media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
