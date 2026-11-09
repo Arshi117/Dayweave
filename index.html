@@ -22,11 +22,9 @@
   </header>
   <main id="main">
     <section class="hero wrap" aria-labelledby="hero-title">
-      <a class="version-link" href="https://github.com/Arshi117/Dayweave/releases/tag/v0.1.2" target="_blank" rel="noopener noreferrer"><span class="live-dot"></span>0.1.2 已更新 <span aria-hidden="true">↗</span></a>
       <h1 id="hero-title">把此刻，<br>留在眼前。</h1>
       <p class="hero-description">日程、待办，一条就好。<br>少一点来回切换，多一点专心。</p>
       <div class="hero-actions"><button class="button primary" data-download>下载 Dayweave <span aria-hidden="true">↗</span></button><a class="button quiet" href="#try">先试试看 <span aria-hidden="true">↓</span></a></div>
-      <p class="platform-note">Windows & macOS · 免费测试版</p>
     </section>
 
     <section class="try-section wrap" id="try" aria-labelledby="try-title">
@@ -40,7 +38,8 @@
             <button data-experience="appearance" aria-pressed="false"><span>切换外观</span><small>选一个喜欢的颜色</small></button>
             <button data-experience="connections" aria-pressed="false"><span>连接与导入</span><small>连接账号、链接或文件</small></button>
             <button data-experience="resize" aria-pressed="false"><span id="resize-label">调整长度</span><small id="resize-guide">拖动左右边缘，自由伸缩</small></button>
-            <button data-experience="dock" aria-pressed="false"><span><span id="dock-label">停靠左下角</span> <i id="dock-arrow" aria-hidden="true">↙</i></span><small id="dock-guide">拖到桌面左下角，即可固定</small></button>
+            <button data-experience="floating" aria-pressed="false" hidden><span>桌面悬浮条</span><small>按住小条，在桌面自由移动</small></button>
+            <button data-experience="dock" aria-pressed="false"><span><span id="dock-label">底部任务栏</span> <i id="dock-arrow" aria-hidden="true">↔</i></span><small id="dock-guide">拖入底部停靠，左右滑动调整位置</small></button>
           </div>
           <button class="reset-button" id="reset-demo" aria-label="重置试用示例">↻ 重新开始</button>
         </aside>
@@ -61,7 +60,7 @@
               <div class="mac-menu-right"><button class="mac-tray-button" id="mac-tray-button" aria-label="展开当前安排" aria-expanded="false" aria-controls="product-demo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16l6-7 5 7 5-16M4 9h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="mac-tray-title" class="mac-tray-title">Dayweave</span><span id="mac-tray-timer" hidden></span></button><time id="mac-clock"></time></div>
             </div>
             <div class="mac-tray-menu" id="mac-tray-menu" role="group" aria-label="Dayweave 菜单" hidden>
-              <p>Dayweave</p><button data-mac-action="toggle">显示当前安排</button><button data-mac-action="calendar">展开日历 <kbd>⌘⌥D</kbd></button><button data-mac-action="connections">连接与导入</button>
+              <p>Dayweave</p><button data-mac-action="menu-bar" aria-pressed="true">顶部菜单栏</button><button data-mac-action="floating" aria-pressed="false">桌面悬浮条</button><hr><button data-mac-action="toggle">显示当前安排</button><button data-mac-action="calendar">展开日历 <kbd>⌘⌥D</kbd></button><button data-mac-action="connections">连接与导入</button>
             </div>
             <div class="dock-target" aria-hidden="true"><span>松开，停靠在这里</span></div>
             <iframe id="product-demo" class="product-demo" src="product-demo/index.html?surface=focus" title="Dayweave 在线试用，使用示例日程" sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="same-origin"></iframe>

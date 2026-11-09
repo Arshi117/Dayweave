@@ -15689,7 +15689,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-D41pvG2y.js"), true ? [] : void 0, import.meta.url));
+const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-D5IQHcvQ.js"), true ? [] : void 0, import.meta.url));
 function CalendarFileImport({ replaceId, initialPdf, onState, onDone }) {
   const [preview, setPreview] = reactExports.useState(null);
   const [pdf, setPdf] = reactExports.useState(initialPdf || null);
@@ -16267,12 +16267,15 @@ function FocusBar() {
   const shell = reactExports.useRef(null);
   const pull = reactExports.useRef(null);
   const showDetails = expanded;
-  function collapse() {
+  function resetDetails() {
     setExpanded(false);
     setSettings(false);
     setAppearanceOpen(false);
     setCalendar(false);
     setSyncOpen(false);
+  }
+  function collapse() {
+    resetDetails();
     if (placement.menuBar) window.focusControls?.hide();
   }
   function openCalendar() {
@@ -16338,11 +16341,13 @@ function FocusBar() {
       setCalendar(false);
       setSyncOpen(false);
     });
+    const offCollapse = window.focusControls?.onCollapse?.(resetDetails);
     const offPlacement = window.focusControls?.onPlacement(setPlacement);
     const offCalendar = window.focusControls?.onOpenCalendar(openCalendar);
     const offSettings = window.focusControls?.onOpenSettings(() => openConnections());
     return () => {
       offDetails?.();
+      offCollapse?.();
       offPlacement?.();
       offCalendar?.();
       offSettings?.();
