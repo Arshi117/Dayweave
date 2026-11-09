@@ -37,6 +37,11 @@ export function isTimedEntry(entry: PlannerEntry): entry is TimedEntry {
   return start >= 0 && start < end && end <= DAY_MINUTES
 }
 export function colorRgb(color?: EventColor): string { return (COLORS.find(item => item.id === color) ?? COLORS[0]).rgb }
+export function calendarEventLayout(start: number, end: number) {
+  const height = Math.max(0, end - start) / 60 * HOUR_HEIGHT
+  const density = height < 16 ? 'marker' : height < 48 ? 'compact' : height < 64 ? 'standard' : 'full'
+  return { height, density, showTime: height >= 48, showLocation: height >= 84 }
+}
 export interface PositionedEntry { entry: TimedEntry; lane: number; laneCount: number; laneSpan: number }
 // Adjacent events share a lane. Each connected overlap group gets its own lanes.
 export function layoutDay(entries: TimedEntry[]): PositionedEntry[] {

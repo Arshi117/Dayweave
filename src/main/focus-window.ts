@@ -8,7 +8,7 @@ import { CalendarLinks } from './calendar-links'
 import { createTaskbarProbe } from './taskbar-visibility'
 import { shouldRecoverDock } from '../shared/dock-visibility'
 import { readFocusMenuStatus, type FocusMenuStatus } from '../shared/focus-menu'
-import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, platformDockLayout, menuBarWindowLayout, isBottomDockCandidate, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
+import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, bottomDockLayout, menuBarWindowLayout, isBottomDockCandidate, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
 
 interface DimensionGesture { target: ResizeTarget; edge: ResizeEdge; x: number; y: number; dimensions: FocusDimensions; anchor: FocusAnchor; left: boolean; above: boolean }
 const resizeEdges: ResizeEdge[] = ['left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
@@ -31,9 +31,9 @@ export class FocusWindow {
   private left = false
   private applyingBounds = false
   private appliedPosition: FocusAnchor | null = null
-  private docked = process.platform === 'win32' || process.platform === 'darwin'
+  private docked = process.platform === 'win32'
   private alwaysOnTop = true
-  private menuBar = false
+  private readonly menuBar = process.platform === 'darwin'
   private menuBarBlurredAt = 0
   private menuBarBounds: (() => Electron.Rectangle | undefined) | null = null
   private menuStatus: FocusMenuStatus = { title: 'Dayweave', timer: '' }
@@ -140,7 +140,6 @@ export class FocusWindow {
       if (Number.isFinite(saved.x) && Number.isFinite(saved.y)) { x = saved.x; y = saved.y }
       this.docked = this.docked && saved.docked !== false
       this.alwaysOnTop = process.platform !== 'darwin' || saved.alwaysOnTop !== false
-      this.menuBar = process.platform === 'darwin' && saved.menuBar === true
       this.dimensions = focusDimensions(saved)
     } catch { /* Use the platform's default placement on first use. */ }
     this.anchor = { x, y }
@@ -156,8 +155,8 @@ export class FocusWindow {
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.webContents.on('will-navigate', event => event.preventDefault())
     window.on('page-title-updated', event => event.preventDefault())
-    window.on('will-move', () => {
-      if (this.menuBar) { this.menuBar = false; this.statusListener?.(this.menuStatus) }
+    window.on('will-move', event => {
+      if (this.menuBar) { event.preventDefault(); return }
       this.nativeMoving = true
       this.docked = false
     })
@@ -208,13 +207,12 @@ export class FocusWindow {
     this.nativeMoving = false
     if (this.positionTimer) { clearTimeout(this.positionTimer); this.positionTimer = null }
     const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
-    this.docked = (process.platform === 'win32' || process.platform === 'darwin') && isBottomDockCandidate(this.anchor, display.workArea)
+    this.docked = process.platform === 'win32' && isBottomDockCandidate(this.anchor, display.workArea)
     this.keepVisible()
     this.savePosition()
   }
   dockToBottom() {
-    if (process.platform !== 'win32' && process.platform !== 'darwin') return
-    this.menuBar = false
+    if (process.platform !== 'win32') return
     this.docked = true
     this.keepVisible()
     this.savePosition()
@@ -229,15 +227,6 @@ export class FocusWindow {
   }
   setMenuBarAnchor(provider: () => Electron.Rectangle | undefined) { this.menuBarBounds = provider; if (this.menuBar) this.keepVisible() }
   onMenuStatus(listener: (status: FocusMenuStatus) => void) { this.statusListener = listener; listener(this.menuStatus) }
-  useMenuBar() {
-    if (process.platform !== 'darwin') return
-    this.finishDimensionResize()
-    this.menuBar = true
-    this.keepVisible()
-    this.savePosition()
-    this.window?.hide()
-    this.statusListener?.(this.menuStatus)
-  }
   isAlwaysOnTop() { return this.alwaysOnTop }
   setAlwaysOnTop(value: boolean) {
     if (process.platform !== 'darwin') return
@@ -246,7 +235,7 @@ export class FocusWindow {
     this.savePosition()
   }
   private validResize(target: unknown, edge: unknown) {
-    return typeof edge === 'string' && resizeEdges.includes(edge as ResizeEdge) && (target === 'strip' ? !this.expanded && (edge === 'left' || edge === 'right') : target === 'calendar' && this.calendarOpen)
+    return typeof edge === 'string' && resizeEdges.includes(edge as ResizeEdge) && (target === 'strip' ? !this.menuBar && !this.expanded && (edge === 'left' || edge === 'right') : target === 'calendar' && this.calendarOpen)
   }
   private dimensionStart(target: ResizeTarget, edge: ResizeEdge): DimensionGesture {
     const point = screen.getCursorScreenPoint()
@@ -285,7 +274,7 @@ export class FocusWindow {
     const layout = this.menuBar
       ? menuBarWindowLayout(tray ?? { x: area.x + area.width - 24, y: area.y, width: 24, height: 0 }, this.contentHeight, area, width, this.dimensions.stripWidth)
       : this.docked
-      ? platformDockLayout(process.platform, this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth)
+      ? bottomDockLayout(this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth)
       : focusWindowLayout(this.anchor, this.contentHeight, area, width, this.dimensions.stripWidth, this.dimensionGesture?.left, this.dimensionGesture?.above ?? false)
     if (!this.menuBar) this.anchor = layout.anchor
     this.above = layout.above

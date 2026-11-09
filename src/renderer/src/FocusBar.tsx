@@ -254,14 +254,14 @@ export function FocusBar() {
   const menuTimer = view.current ? remainingTime : ''
   useEffect(() => { window.focusControls?.setMenuBarStatus?.({ title: stripTitle.slice(0, 500), timer: menuTimer }) }, [stripTitle, menuTimer])
   const problem = error || activeFeed.error
-  return <main ref={shell} data-appearance={appearance} style={{ '--focus-details-max': Math.max(120, placement.availableHeight - 64) + 'px', '--focus-sidebar-width': Math.max(FOCUS_WIDTH, dimensions.stripWidth) - 12 + 'px' } as CSSProperties} className={'focus-shell' + (expanded ? ' is-expanded' : '') + (settings || appearanceOpen ? ' is-settings' : '') + (calendar ? ' has-calendar' : '') + (placement.left ? ' calendar-left' : '') + (placement.above ? ' opens-above' : '') + (placement.docked ? ' is-docked' : '')}
+  return <main ref={shell} data-appearance={appearance} style={{ '--focus-details-max': Math.max(120, placement.availableHeight - 64) + 'px', '--focus-sidebar-width': Math.max(FOCUS_WIDTH, dimensions.stripWidth) - 12 + 'px' } as CSSProperties} className={'focus-shell' + (expanded ? ' is-expanded' : '') + (settings || appearanceOpen ? ' is-settings' : '') + (calendar ? ' has-calendar' : '') + (placement.left ? ' calendar-left' : '') + (placement.above ? ' opens-above' : '') + (placement.docked ? ' is-docked' : '') + (placement.menuBar ? ' is-menu-bar' : '')}
     onKeyDown={event => {
       if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return
       if (calendar) setCalendar(false); else collapse()
     }}>
     <div className="focus-sidebar">
     <div className="focus-strip">
-    <section className={'focus-pill' + (problem ? ' has-problem' : '')} aria-label="当前安排悬浮条" title="按住小条拖动；点击或拉动边缘细横线展开">
+    <section className={'focus-pill' + (problem ? ' has-problem' : '')} aria-label="当前安排悬浮条" title={placement.menuBar ? '当前安排' : '按住小条拖动；点击或拉动边缘细横线展开'}>
       <span className={'focus-pill-marker' + (view.current ? ' is-active' : '')}><span className="focus-status-badge">{view.current ? <Clock3 size={12} strokeWidth={1.7} /> : selectedTask ? <ListTodo size={12} strokeWidth={1.7} /> : <CalendarDays size={12} strokeWidth={1.7} />}</span></span>
       <div className="focus-pill-summary">
         <span className="focus-pill-title" title={view.current?.title ?? selectedTask?.title ?? view.next?.title}>{view.current?.title ?? selectedTask?.title ?? view.next?.title ?? '暂时空闲'}</span>
@@ -275,7 +275,7 @@ export function FocusBar() {
         onPointerDown={pullStart} onPointerMove={pullMove} onPointerUp={pullEnd} onPointerCancel={() => { pull.current = null }} onLostPointerCapture={() => { pull.current = null }}
         onClick={event => { if (event.detail === 0) { if (expanded) collapse(); else setExpanded(true) } }}><span /></button>
     </div>
-    {!hints.seen.move ? <FirstUseHint kind="move" onDismiss={() => hints.dismiss('move')} /> : !expanded && !hints.seen.pull ? <FirstUseHint kind="pull" onDismiss={() => hints.dismiss('pull')} /> : null}
+    {!placement.menuBar && !hints.seen.move ? <FirstUseHint kind="move" onDismiss={() => hints.dismiss('move')} /> : !expanded && !hints.seen.pull ? <FirstUseHint kind="pull" onDismiss={() => hints.dismiss('pull')} /> : null}
     {showDetails && <section id="focus-details" className="focus-details" aria-label={appearanceOpen ? '外观设置' : settings ? '连接与导入' : '当前安排详情'}>
       <header className="focus-details-header">
         {(settings || appearanceOpen) && <button title="返回当前安排" aria-label="返回当前安排" onClick={() => { setSettings(false); setAppearanceOpen(false) }}><ArrowLeft size={14} /></button>}

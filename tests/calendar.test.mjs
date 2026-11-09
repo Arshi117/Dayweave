@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { layoutDay, dateKey, startOfWeek, addDays, toMinutes, timeLabel, isTimedEntry } from '../src/renderer/src/calendar.ts'
+import { calendarEventLayout, layoutDay, dateKey, startOfWeek, addDays, toMinutes, timeLabel, isTimedEntry } from '../src/renderer/src/calendar.ts'
 const event = (id, startTime, endTime) => ({ id, title: id, date: '2026-10-19', kind: 'block', completed: false, startTime, endTime })
 test('overlapping appointments stay side by side; adjacent appointments can share a lane', () => {
   const result = layoutDay([event('a', '09:00', '11:00'), event('b', '10:00', '10:30'), event('c', '10:30', '12:00'), event('d', '12:00', '13:00')])
@@ -34,4 +34,11 @@ test('midnight boundaries and invalid time ranges are handled', () => {
   assert.equal(isTimedEntry(event('backward', '11:00', '10:00')), false)
   assert.equal(isTimedEntry(event('midnight', '23:00', '24:00')), true)
   assert.equal(isTimedEntry({ ...event('task', '09:00', '10:00'), kind: 'deadline' }), false)
+})
+
+test('short appointments keep their real height and only render content that fits', () => {
+  for (const [minutes, density, showTime, showLocation] of [[1, 'marker', false, false], [5, 'marker', false, false], [15, 'compact', false, false], [30, 'compact', false, false], [45, 'standard', true, false], [60, 'full', true, false], [90, 'full', true, true]]) {
+    const view = calendarEventLayout(9 * 60, 9 * 60 + minutes)
+    assert.deepEqual(view, { height: minutes * 1.2, density, showTime, showLocation })
+  }
 })

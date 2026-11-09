@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent } from 'react'
 import { Plus } from 'lucide-react'
-import { colorRgb, dateKey, DAY_MINUTES, HOUR_HEIGHT, layoutDay, snapMinutes, timeLabel, toMinutes } from '../calendar'
+import { calendarEventLayout, colorRgb, dateKey, DAY_MINUTES, HOUR_HEIGHT, layoutDay, snapMinutes, timeLabel, toMinutes } from '../calendar'
 import type { TimedEntry } from '../types'
 import { TASK_DRAG_TYPE } from '../task-drag'
+import '../calendar-event.css'
 interface Props {
   days: Date[]; entries: TimedEntry[]; now: Date
   allDayEntries?: TimedEntry[]
@@ -173,20 +174,23 @@ export function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly 
           const events = layoutDay(entries.filter(entry => entry.date === key))
           const currentMinute = now.getHours() * 60 + now.getMinutes()
           return <div key={key} className="day-column" aria-label={key + '的时间安排'} onPointerDown={event => begin(event, index, 'create')} onContextMenu={event => openCreateMenu(event, index)} onDragOver={event => dragTask(event, index)} onDrop={event => dropTask(event, index)}>
-            {events.map(({ entry, lane, laneCount, laneSpan }) => <button key={entry.id} className={'calendar-event' + (toMinutes(entry.endTime) - toMinutes(entry.startTime) <= 30 ? ' is-short' : '') + (entry.readOnly ? ' is-subscribed' : '') + (gesture?.entry?.id === entry.id && gesture.moved ? ' being-dragged' : '')} style={{
+            {events.map(({ entry, lane, laneCount, laneSpan }) => {
+              const presentation = calendarEventLayout(toMinutes(entry.startTime), toMinutes(entry.endTime))
+              return <button key={entry.id} data-density={presentation.density} aria-label={entry.title + ' ' + entry.startTime + ' – ' + entry.endTime} className={'calendar-event' + (entry.readOnly ? ' is-subscribed' : '') + (gesture?.entry?.id === entry.id && gesture.moved ? ' being-dragged' : '')} style={{
               top: toMinutes(entry.startTime) / 60 * HOUR_HEIGHT,
-              height: (toMinutes(entry.endTime) - toMinutes(entry.startTime)) / 60 * HOUR_HEIGHT,
+              height: presentation.height,
               left: 'calc(' + (lane / laneCount * 100) + '% + 3px)',
               width: 'calc(' + (100 * laneSpan / laneCount) + '% - 6px)',
               '--event-rgb': colorRgb(entry.color),
             } as CSSProperties} tabIndex={readOnly ? -1 : 0} title={entry.title + (entry.sourceTitle ? '\n原名称：' + entry.sourceTitle : '') + '\n' + entry.startTime + ' – ' + entry.endTime + (entry.location ? '\n' + entry.location : '') + (entry.readOnly ? '\n来自订阅日历 · 只读' : '') + (readOnly ? '' : '\n右键可在同一时段新建日程')} onContextMenu={event => openCreateMenu(event, index, entry)} onPointerDown={event => begin(event, index, 'move', entry)} onClick={event => { if (!readOnly && (entry.readOnly || event.detail === 0)) onEdit(entry) }}>
-              <strong>{entry.title}</strong><span>{entry.startTime} – {entry.endTime}</span>
-              {entry.location && <span title={entry.location}>{entry.location}</span>}
-              {!readOnly && !entry.readOnly && <span className="event-resize" title="拖动调整结束时间" onPointerDown={event => begin(event, index, 'resize', entry)} />}
-            </button>)}
+              {presentation.density !== 'marker' && <strong>{entry.title}</strong>}
+              {presentation.showTime && <span>{entry.startTime} – {entry.endTime}</span>}
+              {presentation.showLocation && entry.location && <span title={entry.location}>{entry.location}</span>}
+              {!readOnly && !entry.readOnly && presentation.density !== 'marker' && <span className="event-resize" title="拖动调整结束时间" onPointerDown={event => begin(event, index, 'resize', entry)} />}
+            </button>})}
             {key === today && <div className="now-line" style={{ top: currentMinute / 60 * HOUR_HEIGHT }}><span /></div>}
-            {gesture?.day === index && <div className="selection-block" style={{ top: gesture.start / 60 * HOUR_HEIGHT, height: (gesture.end - gesture.start) / 60 * HOUR_HEIGHT }}>
-              <strong>{gesture.entry?.title ?? '新日程'}</strong><span>{timeLabel(gesture.start)} – {timeLabel(gesture.end)}</span>
+            {gesture?.day === index && <div className="selection-block" data-density={calendarEventLayout(gesture.start, gesture.end).density} style={{ top: gesture.start / 60 * HOUR_HEIGHT, height: (gesture.end - gesture.start) / 60 * HOUR_HEIGHT }}>
+              <strong>{gesture.entry?.title ?? '新日程'}</strong>{calendarEventLayout(gesture.start, gesture.end).showTime && <span>{timeLabel(gesture.start)} – {timeLabel(gesture.end)}</span>}
             </div>}
             {taskDrop?.day === index && <div className="selection-block task-drop-preview" style={{ top: taskDrop.start / 60 * HOUR_HEIGHT, height: (taskDrop.end - taskDrop.start) / 60 * HOUR_HEIGHT }}><strong>松开后确认</strong><span>{timeLabel(taskDrop.start)} — {timeLabel(taskDrop.end)}</span></div>}
           </div>

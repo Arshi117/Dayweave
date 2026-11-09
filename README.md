@@ -20,7 +20,7 @@ Use `Open Dayweave Dev.vbs` for the latest source. The older `Open Dayweave.cmd`
 
 After updating the build, quit the old instance from the tray menu and launch again. Starting another copy only reveals the already-running instance. Development mode watches main and preload sources as well as the renderer, restarting Electron when the native side changes so stale IPC bridges are not mixed with updated renderer code.
 
-The current source supports two Mac placements (not included in the published 0.1.2 packages): **左下角停靠** keeps the strip above the system Dock with upward-opening details; **顶部菜单栏** hides the desktop strip and shows its live countdown beside the menu-bar icon. Click that icon to open arrangements below it; click outside to close, or right-click the icon to switch placement. The calendar opens down and to the left in menu-bar mode. New Mac profiles start at the lower-left; existing floating profiles keep their position. Drag near the bottom to dock, or away to float. **始终置顶** remains optional. Placement, desktop position and preferences survive restarts in `focus-window.json`; transient menu-bar panel bounds never replace the saved desktop position.
+The current Mac source uses the top menu bar only (not included in the published 0.1.2 packages). The status item shows the event name and live countdown; long names are shortened with a full tooltip. Click it to open arrangements below it; click outside to close, or right-click for calendar and connection actions. The calendar opens down and to the left. Previous Mac floating or bottom-left profiles automatically use this menu-bar presentation. Mac bottom-left docking, snapping and detachable desktop strips have been removed; Windows taskbar docking is unchanged. **始终置顶** remains optional for the transient panel.
 
 ## Move and expand
 
@@ -40,6 +40,8 @@ The compact strip keeps its small footprint and top-edge time progress. Drag its
 - The tray menu can show the strip, unfold the calendar, open subscription settings, or quit. `Ctrl+Alt+F` toggles the strip; `Ctrl+Alt+D` unfolds the calendar. Hiding the strip does not quit the app.
 
 ## Calendar drawer
+
+Timed blocks retain their real height. Very short blocks use a colored marker, short blocks show one complete title line, and taller blocks add the time and location when space permits. Full names and times remain available through the tooltip and event details.
 
 Local time blocks and subscribed timed events share the same weekly timetable. Subscription events are not copied into editable local storage. They use a muted green appearance, are read-only, and show their date and time when clicked. Cross-midnight subscription events are split at local day boundaries for display.
 

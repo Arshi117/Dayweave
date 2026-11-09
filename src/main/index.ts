@@ -2,6 +2,7 @@ import { app, globalShortcut, Menu, nativeImage, screen, Tray, type MenuItemCons
 import { isAbsolute, join } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { FocusWindow } from './focus-window'
+import { focusMenuLabel } from '../shared/focus-menu'
 
 let focus: FocusWindow | null = null
 let tray: Tray | null = null
@@ -17,12 +18,7 @@ app.setPath('userData', profileDirectory)
 
 function trayMenu() {
   const items: MenuItemConstructorOptions[] = []
-  if (process.platform === 'darwin') items.push(
-    { label: '左下角停靠', type: 'radio', checked: !focus?.isMenuBarMode(), click: () => focus?.dockToBottom() },
-    { label: '顶部菜单栏', type: 'radio', checked: focus?.isMenuBarMode() ?? false, click: () => focus?.useMenuBar() },
-    { type: 'separator' },
-  )
-  items.push({ label: '显示／隐藏悬浮条', click: () => focus?.toggle() })
+  items.push({ label: process.platform === 'darwin' ? '显示／隐藏当前安排' : '显示／隐藏悬浮条', click: () => focus?.toggle() })
   if (process.platform === 'win32') items.push({ label: '停靠到底部', click: () => focus?.dockToBottom() })
   if (process.platform === 'darwin') items.push({ label: '始终置顶', type: 'checkbox', checked: focus?.isAlwaysOnTop() ?? true, click: item => focus?.setAlwaysOnTop(item.checked) })
   items.push(
@@ -63,10 +59,11 @@ function createTray() {
     tray.setIgnoreDoubleClickEvents(true)
     focus?.setMenuBarAnchor(() => tray?.getBounds())
     focus?.onMenuStatus(status => {
-      tray?.setTitle(focus?.isMenuBarMode() ? status.timer : '', { fontType: 'monospacedDigit' })
-      tray?.setToolTip('Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : '') + (focus?.isMenuBarMode() ? '\n右键切换停靠位置' : ''))
+      tray?.setTitle(focusMenuLabel(status), { fontType: 'monospacedDigit' })
+      tray?.setToolTip('Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : ''))
+      focus?.keepVisible()
     })
-    tray.on('click', () => { if (focus?.isMenuBarMode()) focus.toggleFromMenuBar(); else tray?.popUpContextMenu(trayMenu()) })
+    tray.on('click', () => focus?.toggleFromMenuBar())
     tray.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
   } else {
     tray.setContextMenu(trayMenu())

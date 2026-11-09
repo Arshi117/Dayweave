@@ -28,11 +28,10 @@ app.on('browser-window-created',(_,win)=>{
     const wait=async predicate=>{const until=Date.now()+10000;while(Date.now()<until){if(await evaluate(predicate))return;await new Promise(r=>setTimeout(r,50))}throw Error('macOS renderer check timed out')}
     try{
       await wait('Boolean(window.focusControls && document.querySelector(".focus-pill"))')
-      await wait('Boolean(document.querySelector(".focus-shell.is-docked"))')
+      await wait(process.platform === 'darwin' ? 'Boolean(document.querySelector(".focus-shell.is-menu-bar"))' : 'Boolean(document.querySelector(".focus-shell.is-docked"))')
       if(process.platform === 'darwin') {
-        const compact=win.getContentBounds(), area=screen.getDisplayMatching(compact).workArea
-        assert.ok(Math.abs(compact.x-(area.x+8))<=1)
-        assert.ok(Math.abs(compact.y+compact.height-(area.y+area.height))<=1)
+        assert.equal(win.isVisible(),false)
+        assert.equal(await evaluate('Boolean(document.querySelector(".focus-shell.is-docked"))'),false)
       }
       await wait('Promise.all([window.focusControls.getGoogle(),window.focusControls.getMicrosoft()]).then(([g,m])=>Boolean(g?.configured && m?.configured))')
       const google=await evaluate('window.focusControls.getGoogle()')
@@ -40,9 +39,10 @@ app.on('browser-window-created',(_,win)=>{
       assert.equal(google.configured,true);assert.equal(google.connected,false)
       assert.equal(microsoft.configured,true);assert.equal(microsoft.connected,false)
       assert.equal((await evaluate('window.focusControls.getCalendarLinks()')).sources.length,0)
-      await evaluate('document.querySelector(".focus-pull-handle").click()')
+      if(process.platform === 'darwin')win.webContents.send('focus:open-details')
+      else await evaluate('document.querySelector(".focus-pull-handle").click()')
       await wait('Boolean(document.querySelector(".focus-details"))')
-      await wait('Boolean(document.querySelector(".focus-shell.opens-above"))')
+      await wait('Boolean(document.querySelector(".focus-shell.opens-above")) === '+(process.platform === 'win32'))
       win.webContents.send('focus:open-calendar')
       await wait('Boolean(document.querySelector(".week-calendar"))')
       const b=win.getContentBounds(), area=screen.getDisplayMatching(b).workArea
@@ -50,7 +50,7 @@ app.on('browser-window-created',(_,win)=>{
       assert.ok(b.x+b.width<=area.x+area.width+1)
       if(process.platform === 'darwin') assert.ok(b.y+b.height<=area.y+area.height+1)
       await new Promise(r=>setTimeout(r,250))
-      console.log(JSON.stringify({passed:true,platform:process.platform,architecture:process.arch,checks:['packaged renderer launches','native preload bridge','empty isolated profile','public account registration','bottom-left docking','upward strip expansion','calendar drawer','screen bounds']}))
+      console.log(JSON.stringify({passed:true,platform:process.platform,architecture:process.arch,checks:['packaged renderer launches','native preload bridge','empty isolated profile','public account registration','platform placement','arrangement expansion','calendar drawer','screen bounds']}))
       clearTimeout(timeout);app.exit(0)
     }catch(error){console.error(error);clearTimeout(timeout);app.exit(1)}
   })

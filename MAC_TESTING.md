@@ -33,22 +33,21 @@ These beta packages carry ad-hoc signatures, not an Apple Developer ID signature
 
 If opening fails, report the Mac chip, macOS version and exact error message. Do not share subscription URLs, passwords, tokens or account configuration files.
 
-## Upcoming Mac placement changes (source only)
+## Upcoming Mac menu-bar changes (source only)
 
-The current source offers **左下角停靠** and **顶部菜单栏** through the menu-bar icon. Left-corner mode stays visible above the system Dock and expands upward. Top-menu mode hides the desktop strip, shows the active arrangement's countdown beside the status icon and opens a transient panel below it on click. Click outside or close the panel to hide it; right-click the status icon to change modes. Calendar expansion follows the status item's display and opens downwards and to the left. The same renderer supplies the countdown and actions in both modes. A shortcut still opens the panel when the system hides menu-bar items.
+The current source uses the top menu bar only. The status item shows the event name and active countdown, with long names shortened without splitting emoji; the tooltip retains the full name. Click the item to open arrangements below it. Click outside or close the panel to hide it; right-click for calendar, connections and quit. Calendar expansion follows the status item's display and opens downwards and to the left. The same renderer supplies the event title, countdown and actions. A shortcut still opens the panel when the system hides menu-bar items.
 
-New profiles start at the bottom-left; existing floating profiles keep their position. Drag near the bottom to dock or away to reposition. **始终置顶** stays optional. Mode, desktop position and preferences persist across restarts; menu-bar panel bounds do not overwrite the desktop position.
+Mac bottom-left docking and detachable desktop strips have been removed. Old floating and docked profiles migrate automatically. Windows taskbar docking remains unchanged. **始终置顶** is optional for the transient panel. The linked 0.1.2 downloads do not contain these source changes.
 
 Before distributing an updated Mac package, verify on a real Mac:
 
-- Try bottom, left, right and auto-hidden system Docks, then move between displays with different sizes.
-- Drag continuously near the bottom, then away; confirm docking settles without interrupting the drag. Test the menu command too.
-- Expand details and the calendar while docked; confirm the strip remains at the bottom-left and all controls stay within the work area.
-- Turn **始终置顶** off, switch to another app, then restore it through the menu-bar icon. Restart and confirm the choice and floating/docked position persist.
-- Switch to **顶部菜单栏** and restart: no desktop strip should appear. Check the icon's countdown against the open arrangement, complete or extend it, then hide the panel and confirm updates continue. Idle state should keep only the icon.
-- Open details/calendar/settings from the status item; check screen-edge and display changes. Click outside and click the icon again to close without immediately reopening. Check keyboard shortcuts, right-click mode selection and switching back to **左下角停靠**.
+- Start with fresh, old floating and old bottom-left profiles: only the menu-bar item should appear, with no desktop strip or docking choice.
+- Check the event name and countdown against the open arrangement. Complete or extend it, then hide the panel and confirm updates continue. Test long Chinese names and emoji, including the full tooltip.
+- Open details/calendar/settings; check small displays, screen edges, different system Dock positions and display changes. Click outside and click the icon again to close without immediately reopening.
+- Check keyboard shortcuts, right-click commands, sleep/wake, full-screen spaces and the optional **始终置顶** preference.
+- Create 5-, 15- and 45-minute events: there should be no half-rendered text. Confirm exact times, keyboard access and complete event details remain available.
 
-The packaged-launch smoke test now checks default Mac docking, upward expansion and work-area bounds. Host-side controller tests simulate Mac movement events and preference restoration; they do not replace this native Mac check. These changes are not in the linked 0.1.2 downloads.
+The packaged-launch smoke test checks menu-bar-only startup, arrangement expansion and work-area bounds. Host-side tests simulate controller behavior and old-profile migration; they do not replace native Mac testing.
 
 ## Rebuild on a Mac
 

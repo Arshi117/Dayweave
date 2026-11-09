@@ -1,5 +1,11 @@
 export interface FocusMenuStatus { title: string; timer: string }
 
+export function focusMenuLabel(status: FocusMenuStatus): string {
+  const segments = Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(status.title), part => part.segment)
+  const title = segments.length > 12 ? segments.slice(0, 12).join('') + '…' : status.title
+  return [title, status.timer].filter(Boolean).join(' · ')
+}
+
 export function readFocusMenuStatus(value: unknown): FocusMenuStatus | null {
   if (!value || typeof value !== 'object') return null
   const { title, timer } = value as Record<string, unknown>
