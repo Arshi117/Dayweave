@@ -14484,6 +14484,11 @@ function isTimedEntry(entry) {
 function colorRgb(color) {
   return (COLORS.find((item) => item.id === color) ?? COLORS[0]).rgb;
 }
+function calendarEventLayout(start, end) {
+  const height = Math.max(0, end - start) / 60 * HOUR_HEIGHT;
+  const density = height < 16 ? "marker" : height < 48 ? "compact" : height < 64 ? "standard" : "full";
+  return { height, density, showTime: height >= 48, showLocation: height >= 84 };
+}
 function layoutDay(entries) {
   const sorted = [...entries].sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime) || toMinutes(b.endTime) - toMinutes(a.endTime) || a.id.localeCompare(b.id));
   const output = [];
@@ -14755,28 +14760,31 @@ function WeekCalendar({ days, entries, allDayEntries = [], now, readOnly = false
         const events = layoutDay(entries.filter((entry) => entry.date === key));
         const currentMinute = now.getHours() * 60 + now.getMinutes();
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "day-column", "aria-label": key + "的时间安排", onPointerDown: (event) => begin(event, index, "create"), onContextMenu: (event) => openCreateMenu(event, index), onDragOver: (event) => dragTask(event, index), onDrop: (event) => dropTask(event, index), children: [
-          events.map(({ entry, lane, laneCount, laneSpan }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "calendar-event" + (toMinutes(entry.endTime) - toMinutes(entry.startTime) <= 30 ? " is-short" : "") + (entry.readOnly ? " is-subscribed" : "") + (gesture?.entry?.id === entry.id && gesture.moved ? " being-dragged" : ""), style: {
-            top: toMinutes(entry.startTime) / 60 * HOUR_HEIGHT,
-            height: (toMinutes(entry.endTime) - toMinutes(entry.startTime)) / 60 * HOUR_HEIGHT,
-            left: "calc(" + lane / laneCount * 100 + "% + 3px)",
-            width: "calc(" + 100 * laneSpan / laneCount + "% - 6px)",
-            "--event-rgb": colorRgb(entry.color)
-          }, tabIndex: readOnly ? -1 : 0, title: entry.title + (entry.sourceTitle ? "\n原名称：" + entry.sourceTitle : "") + "\n" + entry.startTime + " – " + entry.endTime + (entry.location ? "\n" + entry.location : "") + (entry.readOnly ? "\n来自订阅日历 · 只读" : "") + (readOnly ? "" : "\n右键可在同一时段新建日程"), onContextMenu: (event) => openCreateMenu(event, index, entry), onPointerDown: (event) => begin(event, index, "move", entry), onClick: (event) => {
-            if (!readOnly && (entry.readOnly || event.detail === 0)) onEdit(entry);
-          }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: entry.title }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              entry.startTime,
-              " – ",
-              entry.endTime
-            ] }),
-            entry.location && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { title: entry.location, children: entry.location }),
-            !readOnly && !entry.readOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "event-resize", title: "拖动调整结束时间", onPointerDown: (event) => begin(event, index, "resize", entry) })
-          ] }, entry.id)),
+          events.map(({ entry, lane, laneCount, laneSpan }) => {
+            const presentation = calendarEventLayout(toMinutes(entry.startTime), toMinutes(entry.endTime));
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { "data-density": presentation.density, "aria-label": entry.title + " " + entry.startTime + " – " + entry.endTime, className: "calendar-event" + (entry.readOnly ? " is-subscribed" : "") + (gesture?.entry?.id === entry.id && gesture.moved ? " being-dragged" : ""), style: {
+              top: toMinutes(entry.startTime) / 60 * HOUR_HEIGHT,
+              height: presentation.height,
+              left: "calc(" + lane / laneCount * 100 + "% + 3px)",
+              width: "calc(" + 100 * laneSpan / laneCount + "% - 6px)",
+              "--event-rgb": colorRgb(entry.color)
+            }, tabIndex: readOnly ? -1 : 0, title: entry.title + (entry.sourceTitle ? "\n原名称：" + entry.sourceTitle : "") + "\n" + entry.startTime + " – " + entry.endTime + (entry.location ? "\n" + entry.location : "") + (entry.readOnly ? "\n来自订阅日历 · 只读" : "") + (readOnly ? "" : "\n右键可在同一时段新建日程"), onContextMenu: (event) => openCreateMenu(event, index, entry), onPointerDown: (event) => begin(event, index, "move", entry), onClick: (event) => {
+              if (!readOnly && (entry.readOnly || event.detail === 0)) onEdit(entry);
+            }, children: [
+              presentation.density !== "marker" && /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: entry.title }),
+              presentation.showTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                entry.startTime,
+                " – ",
+                entry.endTime
+              ] }),
+              presentation.showLocation && entry.location && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { title: entry.location, children: entry.location }),
+              !readOnly && !entry.readOnly && presentation.density !== "marker" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "event-resize", title: "拖动调整结束时间", onPointerDown: (event) => begin(event, index, "resize", entry) })
+            ] }, entry.id);
+          }),
           key === today && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "now-line", style: { top: currentMinute / 60 * HOUR_HEIGHT }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", {}) }),
-          gesture?.day === index && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "selection-block", style: { top: gesture.start / 60 * HOUR_HEIGHT, height: (gesture.end - gesture.start) / 60 * HOUR_HEIGHT }, children: [
+          gesture?.day === index && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "selection-block", "data-density": calendarEventLayout(gesture.start, gesture.end).density, style: { top: gesture.start / 60 * HOUR_HEIGHT, height: (gesture.end - gesture.start) / 60 * HOUR_HEIGHT }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: gesture.entry?.title ?? "新日程" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            calendarEventLayout(gesture.start, gesture.end).showTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               timeLabel(gesture.start),
               " – ",
               timeLabel(gesture.end)
@@ -15681,7 +15689,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-arPUHXzW.js"), true ? [] : void 0, import.meta.url));
+const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-D41pvG2y.js"), true ? [] : void 0, import.meta.url));
 function CalendarFileImport({ replaceId, initialPdf, onState, onDone }) {
   const [preview, setPreview] = reactExports.useState(null);
   const [pdf, setPdf] = reactExports.useState(initialPdf || null);
@@ -16513,7 +16521,7 @@ function FocusBar() {
       ref: shell,
       "data-appearance": appearance,
       style: { "--focus-details-max": Math.max(120, placement.availableHeight - 64) + "px", "--focus-sidebar-width": Math.max(FOCUS_WIDTH, dimensions.stripWidth) - 12 + "px" },
-      className: "focus-shell" + (expanded ? " is-expanded" : "") + (settings || appearanceOpen ? " is-settings" : "") + (calendar ? " has-calendar" : "") + (placement.left ? " calendar-left" : "") + (placement.above ? " opens-above" : "") + (placement.docked ? " is-docked" : ""),
+      className: "focus-shell" + (expanded ? " is-expanded" : "") + (settings || appearanceOpen ? " is-settings" : "") + (calendar ? " has-calendar" : "") + (placement.left ? " calendar-left" : "") + (placement.above ? " opens-above" : "") + (placement.docked ? " is-docked" : "") + (placement.menuBar ? " is-menu-bar" : ""),
       onKeyDown: (event) => {
         if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
         if (calendar) setCalendar(false);
@@ -16522,7 +16530,7 @@ function FocusBar() {
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-sidebar", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-strip", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "focus-pill" + (problem ? " has-problem" : ""), "aria-label": "当前安排悬浮条", title: "按住小条拖动；点击或拉动边缘细横线展开", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "focus-pill" + (problem ? " has-problem" : ""), "aria-label": "当前安排悬浮条", title: placement.menuBar ? "当前安排" : "按住小条拖动；点击或拉动边缘细横线展开", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "focus-pill-marker" + (view.current ? " is-active" : ""), children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "focus-status-badge", children: view.current ? /* @__PURE__ */ jsxRuntimeExports.jsx(Clock3, { size: 12, strokeWidth: 1.7 }) : selectedTask ? /* @__PURE__ */ jsxRuntimeExports.jsx(ListTodo, { size: 12, strokeWidth: 1.7 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CalendarDays, { size: 12, strokeWidth: 1.7 }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-pill-summary", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "focus-pill-title", title: view.current?.title ?? selectedTask?.title ?? view.next?.title, children: view.current?.title ?? selectedTask?.title ?? view.next?.title ?? "暂时空闲" }),
@@ -16575,7 +16583,7 @@ function FocusBar() {
               }
             )
           ] }),
-          !hints.seen.move ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "move", onDismiss: () => hints.dismiss("move") }) : !expanded && !hints.seen.pull ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "pull", onDismiss: () => hints.dismiss("pull") }) : null,
+          !placement.menuBar && !hints.seen.move ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "move", onDismiss: () => hints.dismiss("move") }) : !expanded && !hints.seen.pull ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "pull", onDismiss: () => hints.dismiss("pull") }) : null,
           showDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "focus-details", className: "focus-details", "aria-label": appearanceOpen ? "外观设置" : settings ? "连接与导入" : "当前安排详情", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "focus-details-header", children: [
               (settings || appearanceOpen) && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { title: "返回当前安排", "aria-label": "返回当前安排", onClick: () => {

@@ -102,6 +102,7 @@
   // simulated here; no desktop component, stylesheet or event handler is replaced.
   let drag=null;
   addEventListener('pointerdown',event=>{
+    if(placement.menuBar)return;
     const pill=event.target.closest('.focus-pill');if(!pill||event.button!==0||event.target.closest('button,input,select,a'))return;
     drag={id:event.pointerId,pill};pill.setPointerCapture(event.pointerId);send('drag-start',{x:event.screenX,y:event.screenY});
   });

@@ -2,16 +2,16 @@
 const $=selector=>document.querySelector(selector);
 const frame=$('#product-demo'),desktop=$('#desktop');
 const defaults={stripWidth:300,calendarWidth:500,calendarHeight:480};
-const state={platform:'windows',macMode:'corner',popupOpen:false,menuStatus:{title:'Dayweave',timer:''},height:44,calendar:false,expanded:false,dimensions:{...defaults},anchor:null,docked:false,ready:false,experience:'focus',selected:false};
+const state={platform:'windows',popupOpen:false,menuStatus:{title:'Dayweave',timer:''},height:44,calendar:false,expanded:false,dimensions:{...defaults},anchor:null,docked:false,ready:false,experience:'focus',selected:false};
 let scale=1,drag=null,resize=null,resetTimer;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 function send(type,data={}){frame.contentWindow?.postMessage({channel:'dayweave-demo-host',type,...data},location.origin);}
 function compactHeight(){return 44*scale;}
 function isMac(){return state.platform==='mac';}
-function inMenuBar(){return isMac()&&state.macMode==='menu-bar';}
+function inMenuBar(){return isMac();}
 function workArea(){return{top:isMac()?36:8,bottom:desktop.clientHeight-(isMac()?88:54)};}
 function defaultAnchor(){return isMac()?{x:Math.max(18,desktop.clientWidth-state.dimensions.stripWidth*scale-30),y:104}:{x:innerWidth<=760?18:Math.min(64,desktop.clientWidth-320),y:142};}
-function dockAnchor(){return{x:8,y:isMac()?workArea().bottom-compactHeight():desktop.clientHeight-48+(48-compactHeight())/2};}
+function dockAnchor(){return{x:8,y:desktop.clientHeight-48+(48-compactHeight())/2};}
 function layout(){
   const area=desktop.clientWidth,height=desktop.clientHeight,sidebar=Math.max(300,state.dimensions.stripWidth);
   const width=state.calendar?sidebar+8+state.dimensions.calendarWidth:state.expanded?sidebar:state.dimensions.stripWidth;
@@ -29,8 +29,9 @@ function layout(){
 }
 function markExperience(name){state.experience=name;desktop.dataset.view=name;document.querySelectorAll('[data-experience]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.experience===name)));}
 function selectExperience(name){
-  if(name==='dock'&&isMac()){selectMacMode('corner');return;}
-  if(name==='resize'&&inMenuBar()){state.macMode='corner';state.popupOpen=false;syncMacMode();}
+  if(name==='dock'&&isMac()){
+    state.selected=true;state.popupOpen=true;state.docked=false;frame.hidden=false;markExperience('dock');closeMacMenu();syncMacToggle();layout();send('open-details');return;
+  }
   if(inMenuBar())state.popupOpen=true;
   frame.hidden=false;syncMacToggle();
   state.selected=true;markExperience(name);
@@ -41,26 +42,16 @@ function selectExperience(name){
     // Only the last guide item or a deliberate drag enters the taskbar.
     // Returning to another feature always starts on the desktop again.
     state.docked=false;state.anchor=name==='calendar'?{x:20,y:62}:null;
-    layout();send('experience',{name:name==='resize'?'compact':name});
+    layout();send('experience',{name:name==='resize'?(isMac()?'calendar':'compact'):name});
   }
 }
-function dockingCandidate(anchor){const bottom=isMac()?workArea().bottom:desktop.clientHeight-48;return anchor.x<175&&anchor.y+compactHeight()>bottom-44&&anchor.y<bottom+64;}
+function dockingCandidate(anchor){const bottom=desktop.clientHeight-48;return !isMac()&&anchor.x<175&&anchor.y+compactHeight()>bottom-44&&anchor.y<bottom+64;}
 function closeMacMenu(restoreFocus=false){$('#mac-tray-menu').hidden=true;$('#mac-tray-button').setAttribute('aria-expanded',String(inMenuBar()&&state.popupOpen));if(restoreFocus)$('#mac-tray-button').focus();}
-function syncMacToggle(){$('[data-mac-action="toggle"]').textContent=frame.hidden?'显示小条':'隐藏小条';}
+function syncMacToggle(){$('[data-mac-action="toggle"]').textContent=frame.hidden?'显示当前安排':'隐藏当前安排';}
 function syncMacMode(){
-  desktop.dataset.macMode=state.macMode;
-  document.querySelectorAll('[data-mac-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.macMode===state.macMode)));
+  $('#mac-tray-title').textContent=state.menuStatus.title;
   $('#mac-tray-timer').textContent=inMenuBar()?state.menuStatus.timer:'';$('#mac-tray-timer').hidden=!inMenuBar()||!state.menuStatus.timer;
-  $('#mac-tray-button').setAttribute('aria-label',inMenuBar()?'展开当前安排':'打开 Dayweave 菜单');
-  $('#mac-tray-button').setAttribute('aria-controls',inMenuBar()?'product-demo':'mac-tray-menu');
-  $('#mac-tray-button').title=state.menuStatus.title;
-  $('#platform-hint').textContent=inMenuBar()?'点击倒计时展开 · 右键图标切换位置':isMac()?'左下角常显，或收进顶部菜单栏':'切换桌面，试试怎么用';
-}
-function selectMacMode(mode){
-  if(!isMac()||!['corner','menu-bar'].includes(mode))return;
-  drag=null;resize=null;state.macMode=mode;state.popupOpen=false;state.selected=true;state.anchor=null;state.docked=mode==='corner';
-  frame.hidden=mode==='menu-bar';markExperience(mode==='corner'?'dock':'menu-bar');syncMacMode();closeMacMenu();syncMacToggle();layout();send('collapse');
-  $('#demo-status').textContent=mode==='corner'?'已切换到左下角常显。':'已收进顶部菜单栏，点击倒计时展开当前安排。';
+  $('#mac-tray-button').title=state.menuStatus.title+(state.menuStatus.timer?' · '+state.menuStatus.timer:'');
 }
 function toggleMenuPopup(){
   state.popupOpen=!state.popupOpen;frame.hidden=!state.popupOpen;closeMacMenu();syncMacToggle();layout();
@@ -75,14 +66,15 @@ function selectPlatform(platform){
   const name=isMac()?'Mac':'Windows';
   $('.desktop-viewport').setAttribute('aria-label',name+' 模拟桌面'+(isMac()?'':'，可横向滑动'));desktop.setAttribute('aria-label','可拖动和停靠的 '+name+' 模拟桌面');
   $('#desktop-caption').textContent=name+' 桌面 · 示例';
-  $('#platform-hint').textContent=isMac()?'右上角菜单栏，也能操作小条':'切换桌面，试试怎么用';
-  $('#dock-guide').textContent=isMac()?'固定在系统 Dock 上方，向上展开':'拖到桌面左下角，即可固定';
-  for(const id of ['mac-menubar','mac-dock','mac-release-note','mac-position-toolbar'])$('#'+id).hidden=!isMac();
+  $('#guide-intro').innerHTML=isMac()?'点击顶部事件，展开当前安排。':'按住移动，拉边缘调长度。<br>点横线展开。';
+  $('#dock-label').textContent=isMac()?'顶部菜单栏':'停靠左下角';$('#dock-arrow').hidden=isMac();
+  $('#dock-guide').textContent=isMac()?'事件与倒计时常驻，点击展开':'拖到桌面左下角，即可固定';
+  $('#resize-label').textContent=isMac()?'调整日历':'调整长度';
+  $('#resize-guide').textContent=isMac()?'拖动日历边缘，调整大小':'拖动左右边缘，自由伸缩';
+  for(const id of ['mac-menubar','mac-dock'])$('#'+id).hidden=!isMac();
   state.popupOpen=false;syncMacMode();
   closeMacMenu();syncMacToggle();
-  if(isMac())selectMacMode(state.macMode);
-  else if(state.experience==='menu-bar'){state.selected=false;markExperience('focus');layout();send('collapse');}
-  else if(state.selected)selectExperience(state.experience);else{layout();send('collapse');}
+  state.selected=isMac();frame.hidden=isMac();markExperience(isMac()?'dock':'focus');layout();send('collapse');
   $('#demo-status').textContent='已切换到 '+name+' 桌面体验。';
 }
 function applyResize(gesture,dx,dy){
@@ -101,13 +93,13 @@ addEventListener('message',event=>{
   const data=event.data;
   if(data.type==='ready'){
     state.ready=true;clearTimeout(resetTimer);$('#demo-loading').hidden=true;
-    layout();if(inMenuBar()&&!state.popupOpen)send('collapse');else send('experience',{name:state.selected&&!['dock','resize','menu-bar'].includes(state.experience)?state.experience:'compact'});
+    layout();if(inMenuBar()){if(state.popupOpen)send('experience',{name:state.experience==='dock'?'focus':state.experience==='resize'?'calendar':state.experience});else send('collapse');}else send('experience',{name:state.selected&&!['dock','resize'].includes(state.experience)?state.experience:'compact'});
   }
   if(data.type==='menu-status'&&typeof data.status?.timer==='string'&&typeof data.status.title==='string'){state.menuStatus=data.status;syncMacMode();if(inMenuBar())layout();}
   if(data.type==='hide'&&inMenuBar()){state.popupOpen=false;frame.hidden=true;closeMacMenu();syncMacToggle();}
   if(data.type==='layout'){state.height=clamp(data.height,44,1100);state.calendar=!!data.calendar;state.expanded=!!data.expanded;layout();}
   if(data.type==='drag-start'){
-    if(inMenuBar()){state.macMode='corner';state.popupOpen=false;syncMacMode();}
+    if(isMac())return;
     const anchor={x:parseFloat(frame.style.left)||0,y:(parseFloat(frame.style.top)||0)+(state.docked?(state.height-44)*scale:0)};
     drag={x:data.x,y:data.y,anchor,candidate:false};state.anchor=anchor;state.docked=false;
     if(state.experience==='dock')markExperience('focus');
@@ -132,7 +124,7 @@ addEventListener('message',event=>{
 function resetExample(){
   drag=null;resize=null;Object.assign(state,{height:44,calendar:false,expanded:false,dimensions:{...defaults},anchor:null,docked:false,ready:false,selected:false});
   frame.hidden=false;closeMacMenu();syncMacToggle();desktop.dataset.dragging='false';desktop.dataset.dropReady='false';markExperience('focus');
-  if(isMac()){state.docked=!inMenuBar();frame.hidden=inMenuBar();state.popupOpen=false;markExperience(inMenuBar()?'menu-bar':'dock');syncMacMode();}
+  if(isMac()){frame.hidden=true;state.popupOpen=false;markExperience('dock');syncMacMode();}
   closeMacMenu();syncMacToggle();
   $('#demo-loading').hidden=false;$('#demo-status').textContent='';frame.src='product-demo/index.html?surface=focus&reset='+Date.now();layout();
   resetTimer=setTimeout(()=>{if(!state.ready)$('#demo-loading').textContent='加载较慢，请点击“重新开始”。';},12000);
@@ -141,17 +133,15 @@ function updateClock(){const now=new Date();const time=now.toLocaleTimeString('z
 updateClock();setInterval(updateClock,30000);
 document.querySelectorAll('[data-experience]').forEach(button=>button.addEventListener('click',()=>selectExperience(button.dataset.experience)));
 document.querySelectorAll('[name="demo-platform"]').forEach(input=>input.addEventListener('change',()=>selectPlatform(input.value)));
-document.querySelectorAll('[data-mac-mode]').forEach(button=>button.addEventListener('click',()=>selectMacMode(button.dataset.macMode)));
-$('#mac-tray-button').addEventListener('click',()=>{if(inMenuBar()){toggleMenuPopup();return;}const open=$('#mac-tray-menu').hidden;$('#mac-tray-menu').hidden=!open;$('#mac-tray-button').setAttribute('aria-expanded',String(open));});
+$('#mac-tray-button').addEventListener('click',toggleMenuPopup);
 $('#mac-tray-button').addEventListener('contextmenu',event=>{event.preventDefault();$('#mac-tray-menu').hidden=false;$('#mac-tray-button').setAttribute('aria-expanded','true');});
 document.querySelectorAll('[data-mac-action]').forEach(button=>button.addEventListener('click',()=>{
   const action=button.dataset.macAction;
   if(action==='toggle'){if(inMenuBar())toggleMenuPopup();else{frame.hidden=!frame.hidden;syncMacToggle();}$('#demo-status').textContent=frame.hidden?'小条已隐藏，可从 Mac 菜单重新显示。':'小条已显示。';}
-  else if(action==='dock'||action==='menu-bar')selectMacMode(action==='dock'?'corner':'menu-bar');
   else{state.selected=true;state.popupOpen=inMenuBar();frame.hidden=false;syncMacToggle();markExperience(action);layout();send('experience',{name:action});}
   closeMacMenu(true);
 }));
-document.addEventListener('click',event=>{if(!event.target.closest('.mac-tray-menu,.mac-tray-button')){closeMacMenu();if(inMenuBar()&&state.popupOpen&&!event.target.closest('.product-demo,[data-experience],[data-mac-mode]'))toggleMenuPopup();}});
+document.addEventListener('click',event=>{if(!event.target.closest('.mac-tray-menu,.mac-tray-button')){closeMacMenu();if(inMenuBar()&&state.popupOpen&&!event.target.closest('.product-demo,[data-experience]'))toggleMenuPopup();}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(!$('#mac-tray-menu').hidden){event.preventDefault();closeMacMenu(true);}else if(inMenuBar()&&state.popupOpen){event.preventDefault();toggleMenuPopup();}}});
 frame.addEventListener('pointerenter',()=>closeMacMenu());
 $('#try-connections').addEventListener('click',()=>{selectExperience('connections');$('#try').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});});
