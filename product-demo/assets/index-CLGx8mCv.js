@@ -15681,7 +15681,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-B7eFMwWF.js"), true ? [] : void 0, import.meta.url));
+const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-arPUHXzW.js"), true ? [] : void 0, import.meta.url));
 function CalendarFileImport({ replaceId, initialPdf, onState, onDone }) {
   const [preview, setPreview] = reactExports.useState(null);
   const [pdf, setPdf] = reactExports.useState(initialPdf || null);
@@ -16265,6 +16265,7 @@ function FocusBar() {
     setAppearanceOpen(false);
     setCalendar(false);
     setSyncOpen(false);
+    if (placement.menuBar) window.focusControls?.hide();
   }
   function openCalendar() {
     setExpanded(true);
@@ -16322,10 +16323,18 @@ function FocusBar() {
     }
   }
   reactExports.useEffect(() => {
+    const offDetails = window.focusControls?.onOpenDetails?.(() => {
+      setExpanded(true);
+      setSettings(false);
+      setAppearanceOpen(false);
+      setCalendar(false);
+      setSyncOpen(false);
+    });
     const offPlacement = window.focusControls?.onPlacement(setPlacement);
     const offCalendar = window.focusControls?.onOpenCalendar(openCalendar);
     const offSettings = window.focusControls?.onOpenSettings(() => openConnections());
     return () => {
+      offDetails?.();
       offPlacement?.();
       offCalendar?.();
       offSettings?.();
@@ -16492,6 +16501,11 @@ function FocusBar() {
   const upcomingConflicts = view.conflicts.filter((event) => event.start > now);
   const focusNote = upcomingConflicts.length ? "将与“" + upcomingConflicts[0].title + "”时间重叠" : "";
   const remainingTime = countdown(view.current ? view.end - now : 0);
+  const stripTitle = view.current?.title ?? selectedTask?.title ?? view.next?.title ?? "暂时空闲";
+  const menuTimer = view.current ? remainingTime : "";
+  reactExports.useEffect(() => {
+    window.focusControls?.setMenuBarStatus?.({ title: stripTitle.slice(0, 500), timer: menuTimer });
+  }, [stripTitle, menuTimer]);
   const problem = error || activeFeed.error;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "main",

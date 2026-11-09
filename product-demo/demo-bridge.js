@@ -51,7 +51,9 @@
   const rejectGoogle = async () => ({...google,error:denied});
   const rejectMicrosoft = async () => ({...microsoft,error:denied});
   window.focusControls = {
-    hide:()=>send('notice',{message:'网页预览不会隐藏桌面窗口。'}),
+    hide:()=>send('hide'),
+    setMenuBarStatus:status=>send('menu-status',{status}),
+    onOpenDetails:subscribe('details'),
     resize:(height,calendar=false,expanded=false)=>send('layout',{height,calendar,expanded}),
     beginDimensionResize:(target,edge)=>send('resize-start',{target,edge,...latestPointer}),
     moveDimensionResize:()=>send('resize-move',latestPointer),endDimensionResize:()=>send('resize-end'),
@@ -75,9 +77,11 @@
     const {type,...data}=event.data;
     if(type==='placement'){placement=data.placement;emit('placement',placement)}
     if(type==='collapse')document.querySelector('[aria-label="收起面板"]')?.click();
+    if(type==='open-details')emit('details');
     if(type==='experience'){
       const name=data.name;
-      const close=document.querySelector('[aria-label="收起面板"]');close?.click();
+      if(placement.menuBar)emit('details');
+      else document.querySelector('[aria-label="收起面板"]')?.click();
       google.events=name==='tasks'?originalEvents.filter(item=>item.id!=='google:demo-current'):structuredClone(originalEvents);
       emit('google',clone(google));
       // React handles every visible control; this bridge only selects an entry
