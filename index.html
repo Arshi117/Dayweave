@@ -33,25 +33,45 @@
       <div class="try-layout">
         <aside class="trial-guide">
           <p class="eyebrow">在线试用</p><h2 id="try-title">亲手试一下。</h2>
-          <p class="guide-intro">按住小条移动，<br>点边缘横线展开。</p>
+          <p class="guide-intro">按住移动，拉边缘调长度。<br>点横线展开。</p>
           <div class="experience-list" role="group" aria-label="选择试用内容">
-            <button data-experience="focus" aria-pressed="true"><span>当前安排</span><small>看倒计时，完成或延长</small></button>
-            <button data-experience="calendar" aria-pressed="false"><span>一周日历</span><small>拉开一周，添加安排</small></button>
-            <button data-experience="tasks" aria-pressed="false"><span>待办清单</span><small>选择一件事，勾选完成</small></button>
-            <button data-experience="appearance" aria-pressed="false"><span>换个外观</span><small>选一个喜欢的颜色</small></button>
-            <button data-experience="dock" aria-pressed="false"><span>停靠左下角 <i aria-hidden="true">↙</i></span><small>拖到桌面左下角，即可固定</small></button>
+            <button data-experience="focus" aria-pressed="true"><span>当前安排</span><small>展开小条，完成或延长</small></button>
+            <button data-experience="calendar" aria-pressed="false"><span>展开日历</span><small>看一周安排，勾选待办</small></button>
+            <button data-experience="appearance" aria-pressed="false"><span>切换外观</span><small>选一个喜欢的颜色</small></button>
+            <button data-experience="connections" aria-pressed="false"><span>连接与导入</span><small>连接账号、链接或文件</small></button>
+            <button data-experience="resize" aria-pressed="false"><span>调整长度</span><small>拖动左右边缘，自由伸缩</small></button>
+            <button data-experience="dock" aria-pressed="false"><span>停靠左下角 <i aria-hidden="true">↙</i></span><small id="dock-guide">拖到桌面左下角，即可固定</small></button>
           </div>
           <button class="reset-button" id="reset-demo" aria-label="重置试用示例">↻ 重新开始</button>
         </aside>
+        <div class="trial-stage">
+          <div class="platform-toolbar">
+            <div class="platform-switch" role="radiogroup" aria-label="选择体验系统" data-platform="windows">
+              <span class="platform-thumb" aria-hidden="true"></span>
+              <label><input class="sr-only" type="radio" name="demo-platform" value="windows" checked><span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 1h6v6H1zm8 0h6v6H9zM1 9h6v6H1zm8 0h6v6H9z" fill="currentColor"/></svg>Windows</span></label>
+              <label><input class="sr-only" type="radio" name="demo-platform" value="mac"><span><svg viewBox="0 0 18 16" aria-hidden="true"><rect x="3" y="1" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1 13h16l-1 2H2z" fill="currentColor"/></svg>Mac</span></label>
+            </div>
+            <span class="platform-hint" id="platform-hint">切换桌面，试试怎么用</span>
+          </div>
         <div class="desktop-viewport" aria-label="Windows 模拟桌面，可横向滑动">
-          <div class="app-preview" id="desktop" data-view="focus" data-docked="false" aria-label="可拖动和停靠的 Windows 模拟桌面">
+          <div class="app-preview" id="desktop" data-platform="windows" data-view="focus" data-docked="false" aria-label="可拖动和停靠的 Windows 模拟桌面">
             <div class="desktop-wallpaper" aria-hidden="true"><i></i><i></i><i></i></div>
-            <span class="desktop-caption">Windows 桌面 · 示例</span>
+            <span class="desktop-caption" id="desktop-caption">Windows 桌面 · 示例</span>
+            <div class="mac-menubar" id="mac-menubar" hidden>
+              <div class="mac-system-menu" aria-hidden="true"><svg class="mac-system-mark" width="12" height="16" viewBox="0 0 20 20"><path d="M10 4c0-2 1.5-3 3-3 0 1.8-1.1 3-3 3ZM9 6c-2-2-6-1-6 3 0 4 3 9 5 9 1 0 1-1 2-1s1 1 2 1c2 0 4-3 5-5-4-1-4-5-1-7-2-2-4-2-6 0Z" fill="currentColor"/></svg><strong>Finder</strong><span>文件</span><span>编辑</span><span>显示</span></div>
+              <div class="mac-menu-right"><button class="mac-tray-button" id="mac-tray-button" aria-label="打开 Dayweave 菜单" aria-expanded="false" aria-controls="mac-tray-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16l6-7 5 7 5-16M4 9h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><time id="mac-clock"></time></div>
+            </div>
+            <div class="mac-tray-menu" id="mac-tray-menu" role="group" aria-label="Dayweave 菜单" hidden>
+              <p>Dayweave</p><button data-mac-action="toggle">隐藏小条</button><button data-mac-action="dock">停靠到左下角 <small>新版预览</small></button><button data-mac-action="calendar">展开日历 <kbd>⌘⌥D</kbd></button><button data-mac-action="connections">连接与导入</button>
+            </div>
             <div class="dock-target" aria-hidden="true"><span>松开，停靠在这里</span></div>
             <iframe id="product-demo" class="product-demo" src="product-demo/index.html?surface=focus" title="Dayweave 0.1.2 在线试用，使用示例日程" sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="same-origin"></iframe>
             <div class="loading" id="demo-loading" role="status">正在准备小条…</div>
             <div class="desktop-taskbar" aria-hidden="true"><div class="taskbar-apps"><span class="windows-icon"><i></i><i></i><i></i><i></i></span><span class="search-icon"></span><span class="folder-icon"></span></div><div class="taskbar-time"><time id="desktop-clock">12:00</time><span id="desktop-date"></span></div></div>
+            <div class="mac-dock" id="mac-dock" aria-hidden="true" hidden><span class="mac-dock-finder"><i></i></span><span class="mac-dock-safari"><i></i></span><span class="mac-dock-calendar"><small>日历</small><b id="mac-dock-day">9</b></span><span class="mac-dock-notes"><i></i></span><span class="mac-dock-divider"></span><span class="mac-dock-trash"><i></i></span></div>
           </div>
+        </div>
+          <p class="platform-release-note" id="mac-release-note" hidden>Mac 停靠为新版预览，当前下载版 0.1.2 使用悬浮模式。</p>
         </div>
       </div>
       <p class="sr-only" id="demo-status" role="status" aria-live="polite"></p>
