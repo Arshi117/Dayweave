@@ -15698,7 +15698,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-B1nKWNzn.js"), true ? [] : void 0, import.meta.url));
+const PdfTimetable = reactExports.lazy(() => __vitePreload(() => import("./PdfTimetable-DH2fJMJ7.js"), true ? [] : void 0, import.meta.url));
 function CalendarFileImport({ replaceId, initialPdf, onState, onDone }) {
   const [preview, setPreview] = reactExports.useState(null);
   const [pdf, setPdf] = reactExports.useState(initialPdf || null);
@@ -16300,11 +16300,23 @@ function FocusBar() {
     setAppearanceOpen(false);
     setSyncOpen(false);
   }
-  reactExports.useEffect(() => window.focusControls?.onOutsideClick?.(() => {
-    if (document.querySelector('dialog[open], [aria-modal="true"]')) return;
-    if (calendar) setCalendar(false);
-    else if (expanded) collapse();
-  }), [calendar, expanded, placement.menuBar]);
+  reactExports.useEffect(() => {
+    function dismissOutside() {
+      if (document.querySelector('dialog[open], [aria-modal="true"]')) return;
+      if (calendar) setCalendar(false);
+      else if (expanded) collapse();
+    }
+    function backgroundPointerDown(event) {
+      if (event.button !== 0 || !(event.target instanceof Element)) return;
+      if (!event.target.closest(".focus-strip, .focus-details, .focus-calendar-panel, .first-use-hint")) dismissOutside();
+    }
+    const off = window.focusControls?.onOutsideClick?.(dismissOutside);
+    document.addEventListener("pointerdown", backgroundPointerDown, true);
+    return () => {
+      off?.();
+      document.removeEventListener("pointerdown", backgroundPointerDown, true);
+    };
+  }, [calendar, expanded, placement.menuBar]);
   reactExports.useEffect(() => {
     if (expanded) hints.dismiss("pull");
   }, [expanded]);
@@ -16548,7 +16560,7 @@ function FocusBar() {
       },
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-sidebar", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-strip", children: [
+          !placement.menuBar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "focus-strip", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "focus-pill" + (problem ? " has-problem" : "") + (window.focusControls?.manualStripDrag ? " manual-drag" : ""), "aria-label": "当前安排悬浮条", title: placement.menuBar ? "按住拖到桌面，变为悬浮条" : "按住小条拖动；点击或拉动边缘细横线展开", onPointerDown: (event) => {
               if (event.button !== 0 || !window.focusControls?.manualStripDrag || event.target.closest('button,input,select,a,[role="button"]')) return;
               event.preventDefault();
@@ -16606,7 +16618,7 @@ function FocusBar() {
               }
             )
           ] }),
-          !placement.menuBar && !hints.seen.move ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "move", onDismiss: () => hints.dismiss("move") }) : !expanded && !hints.seen.pull ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "pull", onDismiss: () => hints.dismiss("pull") }) : null,
+          !placement.menuBar && (!hints.seen.move ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "move", onDismiss: () => hints.dismiss("move") }) : !expanded && !hints.seen.pull ? /* @__PURE__ */ jsxRuntimeExports.jsx(FirstUseHint, { kind: "pull", onDismiss: () => hints.dismiss("pull") }) : null),
           showDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "focus-details", className: "focus-details", "aria-label": appearanceOpen ? "外观设置" : settings ? "连接与导入" : "当前安排详情", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "focus-details-header", children: [
               (settings || appearanceOpen) && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { title: "返回当前安排", "aria-label": "返回当前安排", onClick: () => {
