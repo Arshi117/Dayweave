@@ -64,8 +64,9 @@ function createTray() {
     tray.setIgnoreDoubleClickEvents(true)
     focus?.setMenuBarAnchor(() => tray?.getBounds())
     focus?.onMenuStatus(status => {
-      tray?.setTitle(focusMenuLabel(status), { fontType: 'monospacedDigit' })
-      tray?.setToolTip('Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : ''))
+      const menuBar = focus?.isMenuBarMode() ?? true
+      tray?.setTitle(menuBar ? focusMenuLabel(status) : '', { fontType: 'monospacedDigit' })
+      tray?.setToolTip(menuBar ? 'Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : '') : 'Dayweave · 显示或隐藏悬浮条')
       if (focus?.isMenuBarMode()) focus.keepVisible()
     })
     tray.on('mouse-down', (_event, point) => focus?.beginStripDrag('tray', point))

@@ -54,8 +54,9 @@ function syncMacToggle(){$('[data-mac-action="toggle"]').textContent=frame.hidde
 function syncMacMode(){
   $('[data-mac-action="menu-bar"]').setAttribute('aria-pressed',String(!state.macFloating));$('[data-mac-action="floating"]').setAttribute('aria-pressed',String(state.macFloating));
   $('#mac-tray-title').textContent=state.menuStatus.title;
-  $('#mac-tray-timer').textContent=state.menuStatus.timer;$('#mac-tray-timer').hidden=!state.menuStatus.timer;
-  $('#mac-tray-button').title=state.menuStatus.title+(state.menuStatus.timer?' · '+state.menuStatus.timer:'');
+  $('#mac-tray-title').hidden=state.macFloating;
+  $('#mac-tray-timer').textContent=state.menuStatus.timer;$('#mac-tray-timer').hidden=state.macFloating||!state.menuStatus.timer;
+  $('#mac-tray-button').title=state.macFloating?'Dayweave · 显示或隐藏悬浮条':state.menuStatus.title+(state.menuStatus.timer?' · '+state.menuStatus.timer:'');
   $('#mac-tray-button').setAttribute('aria-label',inMenuBar()?'展开当前安排':'显示或隐藏悬浮条');
   if(isMac()){$('#guide-intro').innerHTML='从菜单栏拖下，变为悬浮条。<br>拖回顶部，即可停靠。';$('#resize-label').textContent=state.macFloating?'调整长度':'调整日历';$('#resize-guide').textContent=state.macFloating?'拖动左右边缘，自由伸缩':'拖动日历边缘，调整大小';}
 }
