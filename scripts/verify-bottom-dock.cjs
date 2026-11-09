@@ -13,7 +13,7 @@ app.on('browser-window-created', (_, win) => {
     const wait = async check => { const until = Date.now()+10000; while(Date.now()<until) { if(await check())return; await new Promise(r=>setTimeout(r,50)) } throw Error('Native dock check timed out') }
     const docked = () => evaluate('Boolean(document.querySelector(".focus-shell.is-docked"))')
     const expand = () => evaluate('document.querySelector(".focus-pull-handle").click()')
-    const move = async (x,y) => { win.emit('will-move', { preventDefault() {} }, {x,y,width:win.getBounds().width,height:win.getBounds().height}); win.setPosition(x,y); await new Promise(r=>setTimeout(r,100)); win.emit('moved') }
+    const move = async (x,y) => { let prevented=false;win.emit('will-move', { preventDefault() {prevented=true} }, {x,y,width:win.getBounds().width,height:win.getBounds().height}); if(!prevented)win.setPosition(x,y); await new Promise(r=>setTimeout(r,100)); win.emit('moved') }
     try {
       await wait(docked)
       const display = screen.getDisplayMatching(win.getBounds()), area = display.workArea
@@ -33,8 +33,17 @@ app.on('browser-window-created', (_, win) => {
       await move(area.x+300,area.y+area.height-44)
       await wait(docked)
       assert.equal(JSON.parse(readFileSync(join(directory,'focus-window.json'),'utf8')).docked,true)
-      assert.ok(Math.abs(win.getContentBounds().x-(area.x+8))<=1)
-      console.log(JSON.stringify({passed:true,directory,checks:['native taskbar bounds','topmost dock','upward dock expansion','native drag detach','downward floating expansion','native bottom snap','persisted docking state'],display:display.bounds,workArea:area,dock:win.getContentBounds()}))
+      assert.ok(Math.abs(win.getContentBounds().x-(area.x+300))<=1)
+      const bottom=win.getContentBounds().y+win.getContentBounds().height
+      await move(area.x+area.width-400,win.getContentBounds().y-10)
+      await wait(docked)
+      assert.ok(Math.abs(win.getContentBounds().x-(area.x+area.width-400))<=1)
+      assert.ok(Math.abs(win.getContentBounds().y+win.getContentBounds().height-bottom)<=1,'horizontal dragging must keep the taskbar height')
+      assert.ok(Math.abs(JSON.parse(readFileSync(join(directory,'focus-window.json'),'utf8')).x-(area.x+area.width-400))<=1)
+      win.webContents.send('focus:open-calendar')
+      await wait(()=>evaluate('Boolean(document.querySelector(".week-calendar"))'))
+      await wait(()=>evaluate('document.querySelector(".focus-shell").classList.contains("calendar-left")'))
+      console.log(JSON.stringify({passed:true,directory,checks:['native taskbar bounds','topmost dock','upward dock expansion','native drag detach','downward floating expansion','snap at chosen x','horizontal taskbar sliding','locked taskbar height','persisted horizontal position','calendar opens left near right edge'],display:display.bounds,workArea:area,dock:win.getContentBounds()}))
       clearTimeout(timeout); app.exit(0)
     } catch(error) { console.error(error); clearTimeout(timeout); app.exit(1) }
   })

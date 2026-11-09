@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-- Use the Mac top menu bar for the event name and countdown, with an on-demand arrangement panel. Remove Mac bottom-left docking and desktop detachment; migrate existing Mac profiles automatically. Keep Windows taskbar docking unchanged.
+- Offer Mac menu-bar and freely draggable desktop-strip presentations, with the same event name/countdown, saved floating position, resizing and mode switching.
+- Let Windows strips dock and slide across the entire bottom taskbar, keep their dock height and remember their horizontal position. Open the calendar on the available side near screen edges.
 - Keep an optional Mac **始终置顶** preference for the transient panel and dismiss it on focus loss.
 - Fit short-event labels to their actual height: use a marker, one title line or fuller details without changing the scheduled duration. Retain full event names and times for inspection and editing.
-- Simplify the interactive website around Windows docking and Mac menu-bar behavior, removing redundant placement and helper copy.
+- Simplify the interactive website around Windows taskbar sliding and both Mac presentations; remove redundant helper copy and the homepage update/beta captions.
 
 ## 0.1.2 — 2026-11-08
 

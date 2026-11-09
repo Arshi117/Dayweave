@@ -110,7 +110,7 @@ test('Mac menu-bar mode hides the desktop strip, restores after restart and anch
     rmSync(directory, { recursive: true, force: true })
   }
 })
-test('legacy Mac floating and docked profiles migrate to menu-bar-only mode and cannot detach', async () => {
+test('Mac floating strips move freely, persist their position and return from menu-bar mode without snapping', async () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
   const directory = mkdtempSync(join(tmpdir(), 'dayweave-mac-controller-'))
   Object.defineProperty(process, 'platform', { value: 'darwin' })
@@ -118,24 +118,29 @@ test('legacy Mac floating and docked profiles migrate to menu-bar-only mode and 
   const saved = () => JSON.parse(readFileSync(join(directory, 'focus-window.json'), 'utf8'))
   const create = async () => { handlers.removeAllListeners(); focus = new FocusWindow(directory, 'preload'); await focus.create(); return FakeWindow.latest }
   try {
-    for (const docked of [true, false]) {
-      writeFileSync(join(directory, 'focus-window.json'), JSON.stringify({ x: 8, y: 786, docked, menuBar: false, alwaysOnTop: false }))
-      const win = await create()
-      assert.equal(win.visible, false)
-      assert.equal(focus.isMenuBarMode(), true)
-      assert.equal(win.topmost, false)
-      let prevented = false
-      win.emit('will-move', { preventDefault() { prevented = true } })
-      assert.equal(prevented, true)
-      focus.openCalendar()
-      handlers.emit('focus:resize', { sender: { id: 1 } }, 650, true, true)
-      assert.ok(win.bounds.y >= area.y)
-      assert.ok(win.bounds.y + win.bounds.height <= area.y + area.height)
-      assert.equal(win.topmost, false)
-      focus.stop()
-      assert.equal(saved().menuBar, true)
-      assert.equal(saved().docked, false)
-    }
+    writeFileSync(join(directory, 'focus-window.json'), JSON.stringify({ x: 300, y: 200, docked: true, menuBar: false, alwaysOnTop: false }))
+    let win=await create()
+    assert.equal(win.visible,true)
+    assert.equal(focus.isMenuBarMode(),false)
+    assert.equal(win.topmost,false)
+    let prevented=false
+    win.emit('will-move',{preventDefault(){prevented=true}})
+    assert.equal(prevented,false)
+    win.setContentBounds({...win.bounds,x:500,y:350})
+    await new Promise(resolve=>setTimeout(resolve,350))
+    assert.equal(saved().x,500);assert.equal(saved().y,350);assert.equal(saved().docked,false)
+    win.emit('blur');assert.equal(win.visible,true,'floating strips stay visible when another app gains focus')
+    focus.useMenuBar();assert.equal(win.visible,false);assert.equal(saved().menuBar,true)
+    focus.openCalendar()
+    handlers.emit('focus:resize',{sender:{id:1}},650,true,true)
+    focus.useFloatingStrip()
+    assert.equal(win.visible,true)
+    assert.deepEqual(win.bounds,{x:500,y:350,width:300,height:44})
+    assert.equal(saved().menuBar,false)
+    focus.stop();win=await create()
+    assert.equal(focus.isMenuBarMode(),false)
+    assert.deepEqual(win.bounds,{x:500,y:350,width:300,height:44})
+    focus.dockToBottom();assert.equal(saved().docked,false)
   } finally {
     focus?.stop()
     Object.defineProperty(process, 'platform', originalPlatform)

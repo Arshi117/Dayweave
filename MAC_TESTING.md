@@ -33,21 +33,19 @@ These beta packages carry ad-hoc signatures, not an Apple Developer ID signature
 
 If opening fails, report the Mac chip, macOS version and exact error message. Do not share subscription URLs, passwords, tokens or account configuration files.
 
-## Upcoming Mac menu-bar changes (source only)
+## Upcoming Mac presentations (source only)
 
-The current source uses the top menu bar only. The status item shows the event name and active countdown, with long names shortened without splitting emoji; the tooltip retains the full name. Click the item to open arrangements below it. Click outside or close the panel to hide it; right-click for calendar, connections and quit. Calendar expansion follows the status item's display and opens downwards and to the left. The same renderer supplies the event title, countdown and actions. A shortcut still opens the panel when the system hides menu-bar items.
-
-Mac bottom-left docking and detachable desktop strips have been removed. Old floating and docked profiles migrate automatically. Windows taskbar docking remains unchanged. **始终置顶** is optional for the transient panel. The linked 0.1.2 downloads do not contain these source changes.
+The current source offers **顶部菜单栏** and **桌面悬浮条** from the status item's right-click menu. The item shows the event name and countdown in either presentation, shortening long names without splitting emoji; its tooltip retains the full title. Menu-bar mode opens a transient panel below the item and closes on focus loss. Floating mode keeps a draggable desktop strip visible, with the same pull handle, event actions, strip resizing and calendar as Windows. The selected presentation and floating position survive restarts and mode changes. Mac does not snap to the Windows taskbar. **始终置顶** is optional. The linked 0.1.2 downloads do not contain these source changes.
 
 Before distributing an updated Mac package, verify on a real Mac:
 
-- Start with fresh, old floating and old bottom-left profiles: only the menu-bar item should appear, with no desktop strip or docking choice.
-- Check the event name and countdown against the open arrangement. Complete or extend it, then hide the panel and confirm updates continue. Test long Chinese names and emoji, including the full tooltip.
-- Open details/calendar/settings; check small displays, screen edges, different system Dock positions and display changes. Click outside and click the icon again to close without immediately reopening.
-- Check keyboard shortcuts, right-click commands, sleep/wake, full-screen spaces and the optional **始终置顶** preference.
-- Create 5-, 15- and 45-minute events: there should be no half-rendered text. Confirm exact times, keyboard access and complete event details remain available.
+- Switch presentations from the right-click menu. Drag the floating strip in both axes, switch to the menu bar and back, and restart: its chosen position should return. Clicking another app should leave a floating strip visible while hiding a menu-bar panel.
+- Check the event name/countdown, long Chinese names, emoji and full tooltip. Complete or extend the arrangement and confirm updates continue while hidden.
+- Resize the floating strip and calendar. Check small displays, screen edges, different system Dock positions and display changes.
+- Check keyboard shortcuts, sleep/wake, full-screen spaces and **始终置顶**. Click outside a menu-bar panel and click the icon again without immediately reopening it.
+- Create 5-, 15- and 45-minute events: there should be no half-rendered text. Confirm exact times, keyboard access and complete details remain available.
 
-The packaged-launch smoke test checks menu-bar-only startup, arrangement expansion and work-area bounds. Host-side tests simulate controller behavior and old-profile migration; they do not replace native Mac testing.
+The packaged-launch smoke test checks default menu-bar startup and the preload bridge. Host-side controller tests cover presentation switching and persistent floating bounds; native Mac testing is still required.
 
 ## Rebuild on a Mac
 

@@ -18,6 +18,11 @@ app.setPath('userData', profileDirectory)
 
 function trayMenu() {
   const items: MenuItemConstructorOptions[] = []
+  if (process.platform === 'darwin') items.push(
+    { label: '顶部菜单栏', type: 'radio', checked: focus?.isMenuBarMode() ?? true, click: () => focus?.useMenuBar() },
+    { label: '桌面悬浮条', type: 'radio', checked: !focus?.isMenuBarMode(), click: () => focus?.useFloatingStrip() },
+    { type: 'separator' },
+  )
   items.push({ label: process.platform === 'darwin' ? '显示／隐藏当前安排' : '显示／隐藏悬浮条', click: () => focus?.toggle() })
   if (process.platform === 'win32') items.push({ label: '停靠到底部', click: () => focus?.dockToBottom() })
   if (process.platform === 'darwin') items.push({ label: '始终置顶', type: 'checkbox', checked: focus?.isAlwaysOnTop() ?? true, click: item => focus?.setAlwaysOnTop(item.checked) })
@@ -61,9 +66,9 @@ function createTray() {
     focus?.onMenuStatus(status => {
       tray?.setTitle(focusMenuLabel(status), { fontType: 'monospacedDigit' })
       tray?.setToolTip('Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : ''))
-      focus?.keepVisible()
+      if (focus?.isMenuBarMode()) focus.keepVisible()
     })
-    tray.on('click', () => focus?.toggleFromMenuBar())
+    tray.on('click', () => { if (focus?.isMenuBarMode()) focus.toggleFromMenuBar(); else focus?.toggle() })
     tray.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
   } else {
     tray.setContextMenu(trayMenu())

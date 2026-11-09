@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('focusControls', {
     ipcRenderer.on('focus:open-details', handler)
     return () => ipcRenderer.removeListener('focus:open-details', handler)
   },
+  onCollapse: (listener: () => void) => {
+    const handler = () => listener()
+    ipcRenderer.on('focus:collapse', handler)
+    return () => ipcRenderer.removeListener('focus:collapse', handler)
+  },
   resize: (height: number, calendar = false, expanded = false) => ipcRenderer.send('focus:resize', height, calendar, expanded),
   beginDimensionResize: (target: ResizeTarget, edge: ResizeEdge) => ipcRenderer.send('focus:dimension-start', target, edge),
   moveDimensionResize: () => ipcRenderer.send('focus:dimension-move'),

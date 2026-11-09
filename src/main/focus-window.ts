@@ -33,7 +33,7 @@ export class FocusWindow {
   private appliedPosition: FocusAnchor | null = null
   private docked = process.platform === 'win32'
   private alwaysOnTop = true
-  private readonly menuBar = process.platform === 'darwin'
+  private menuBar = process.platform === 'darwin'
   private menuBarBlurredAt = 0
   private menuBarBounds: (() => Electron.Rectangle | undefined) | null = null
   private menuStatus: FocusMenuStatus = { title: 'Dayweave', timer: '' }
@@ -134,12 +134,13 @@ export class FocusWindow {
   }
   async create() {
     const area = screen.getPrimaryDisplay().workArea
-    let x = area.x + area.width - FOCUS_WIDTH - 24, y = area.y + 88
+    let x = process.platform === 'win32' ? area.x + 8 : area.x + area.width - FOCUS_WIDTH - 24, y = area.y + 88
     try {
       const saved = JSON.parse(readFileSync(this.settingsFile, 'utf8'))
       if (Number.isFinite(saved.x) && Number.isFinite(saved.y)) { x = saved.x; y = saved.y }
       this.docked = this.docked && saved.docked !== false
       this.alwaysOnTop = process.platform !== 'darwin' || saved.alwaysOnTop !== false
+      this.menuBar = process.platform === 'darwin' && saved.menuBar !== false
       this.dimensions = focusDimensions(saved)
     } catch { /* Use the platform's default placement on first use. */ }
     this.anchor = { x, y }
@@ -155,9 +156,21 @@ export class FocusWindow {
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.webContents.on('will-navigate', event => event.preventDefault())
     window.on('page-title-updated', event => event.preventDefault())
-    window.on('will-move', event => {
+    window.on('will-move', (event, proposedBounds) => {
       if (this.menuBar) { event.preventDefault(); return }
       this.nativeMoving = true
+      if (process.platform === 'win32' && this.docked) {
+        const anchor = { x: proposedBounds.x + (this.left ? proposedBounds.width - this.dimensions.stripWidth : 0), y: proposedBounds.y + (this.above ? proposedBounds.height - FOCUS_COMPACT_HEIGHT : 0) }
+        const display = screen.getDisplayMatching({ ...anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
+        if (isBottomDockCandidate(anchor, display.workArea)) {
+          event.preventDefault()
+          this.anchor = anchor
+          this.keepVisible()
+          if (this.positionTimer) clearTimeout(this.positionTimer)
+          this.positionTimer = setTimeout(() => this.finishNativeMove(), 300)
+          return
+        }
+      }
       this.docked = false
     })
     window.on('move', () => {
@@ -170,7 +183,7 @@ export class FocusWindow {
     })
     // On macOS `moved` aliases every `move`, rather than ending the drag.
     // Let the quiet-period timer finish it so snapping does not fight each move.
-    window.on('moved', () => { if (process.platform !== 'darwin' && this.nativeMoving) this.finishNativeMove() })
+    window.on('moved', () => { if (!this.applyingBounds && process.platform !== 'darwin' && this.nativeMoving) this.finishNativeMove() })
     window.on('close', event => { event.preventDefault(); window.hide() })
     window.on('blur', () => { this.finishDimensionResize(); if (this.menuBar) { this.menuBarBlurredAt = Date.now(); window.hide() } })
     window.webContents.on('render-process-gone', () => { if (!window.isDestroyed()) window.reload() })
@@ -220,6 +233,30 @@ export class FocusWindow {
     this.statusListener?.(this.menuStatus)
   }
   isMenuBarMode() { return this.menuBar }
+  useFloatingStrip() {
+    if (process.platform !== 'darwin') return
+    this.finishDimensionResize()
+    this.menuBar = false
+    this.docked = false
+    this.expanded = false
+    this.calendarOpen = false
+    this.contentHeight = FOCUS_COMPACT_HEIGHT
+    this.keepVisible()
+    this.window?.webContents.send('focus:collapse')
+    this.savePosition()
+    this.window?.showInactive()
+    this.statusListener?.(this.menuStatus)
+  }
+  useMenuBar() {
+    if (process.platform !== 'darwin') return
+    this.finishDimensionResize()
+    this.menuBar = true
+    this.keepVisible()
+    this.window?.webContents.send('focus:collapse')
+    this.savePosition()
+    this.window?.hide()
+    this.statusListener?.(this.menuStatus)
+  }
   toggleFromMenuBar() {
     // Clicking the status item can blur and hide the panel before `click` fires.
     if (this.menuBar && Date.now() - this.menuBarBlurredAt < 200) return
@@ -274,7 +311,7 @@ export class FocusWindow {
     const layout = this.menuBar
       ? menuBarWindowLayout(tray ?? { x: area.x + area.width - 24, y: area.y, width: 24, height: 0 }, this.contentHeight, area, width, this.dimensions.stripWidth)
       : this.docked
-      ? bottomDockLayout(this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth)
+      ? bottomDockLayout(this.contentHeight, display.bounds, area, width, this.dimensions.stripWidth, this.anchor.x)
       : focusWindowLayout(this.anchor, this.contentHeight, area, width, this.dimensions.stripWidth, this.dimensionGesture?.left, this.dimensionGesture?.above ?? false)
     if (!this.menuBar) this.anchor = layout.anchor
     this.above = layout.above

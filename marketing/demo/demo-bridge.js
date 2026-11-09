@@ -54,6 +54,7 @@
     hide:()=>send('hide'),
     setMenuBarStatus:status=>send('menu-status',{status}),
     onOpenDetails:subscribe('details'),
+    onCollapse:subscribe('collapse'),
     resize:(height,calendar=false,expanded=false)=>send('layout',{height,calendar,expanded}),
     beginDimensionResize:(target,edge)=>send('resize-start',{target,edge,...latestPointer}),
     moveDimensionResize:()=>send('resize-move',latestPointer),endDimensionResize:()=>send('resize-end'),
@@ -76,7 +77,7 @@
     if(event.source!==parent||event.origin!==location.origin||event.data?.channel!=='dayweave-demo-host')return;
     const {type,...data}=event.data;
     if(type==='placement'){placement=data.placement;emit('placement',placement)}
-    if(type==='collapse')document.querySelector('[aria-label="收起面板"]')?.click();
+    if(type==='collapse')emit('collapse');
     if(type==='open-details')emit('details');
     if(type==='experience'){
       const name=data.name;

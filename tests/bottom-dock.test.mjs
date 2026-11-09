@@ -36,6 +36,22 @@ test('an auto-hidden taskbar still leaves an accessible bottom dock on a small d
   assert.equal(layout.bounds.width,320)
 })
 
+test('Windows docking keeps the chosen horizontal position across expansion and clamps both taskbar ends', () => {
+  const bounds={x:-1920,y:0,width:1920,height:1080},work={...bounds,height:1032}
+  for(const x of [-1920,-1520,-1020,-300]) {
+    const compact=bottomDockLayout(44,bounds,work,300,300,x)
+    assert.equal(compact.anchor.x,x)
+    for(const height of [300,650]) {
+      const expanded=bottomDockLayout(height,bounds,work,1068,300,x)
+      assert.deepEqual(expanded.anchor,compact.anchor)
+      assert.equal(expanded.bounds.y+expanded.bounds.height,compact.bounds.y+compact.bounds.height)
+    }
+  }
+  assert.equal(bottomDockAnchor(bounds,work,300,-9999).x,-1920)
+  assert.equal(bottomDockAnchor(bounds,work,300,9999).x,-300)
+  assert.equal(bottomDockAnchor(bounds,work,600,9999).x,-600)
+})
+
 test('menu-bar panels open downwards and stay in the selected display work area', () => {
   for (const work of [{ x: 0, y: 25, width: 1440, height: 805 }, { x: -800, y: -600, width: 800, height: 575 }]) {
     for (const trayX of [work.x + 10, work.x + work.width - 100]) {

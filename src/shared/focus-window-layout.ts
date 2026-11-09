@@ -13,18 +13,19 @@ interface Area { x: number; y: number; width: number; height: number }
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value))
 // Electron's workArea excludes the taskbar. Dock against display bounds so the
 // compact strip can occupy the bottom taskbar region instead of stopping above it.
-export function bottomDockAnchor(bounds: Area, workArea: Area, compactWidth = FOCUS_WIDTH): FocusAnchor {
+export function bottomDockAnchor(bounds: Area, workArea: Area, compactWidth = FOCUS_WIDTH, requestedX?: number): FocusAnchor {
   const reserved = bounds.y + bounds.height - (workArea.y + workArea.height)
   const bottom = reserved > 0 && reserved <= 120 ? bounds.y + bounds.height : workArea.y + workArea.height
   const inset = reserved >= FOCUS_COMPACT_HEIGHT && reserved <= 120 ? Math.floor((reserved - FOCUS_COMPACT_HEIGHT) / 2) : 0
-  return { x: clamp(workArea.x + 8, bounds.x, bounds.x + bounds.width - Math.min(compactWidth, bounds.width)), y: bottom - FOCUS_COMPACT_HEIGHT - inset }
+  const x = typeof requestedX === 'number' && Number.isFinite(requestedX) ? requestedX : workArea.x + 8
+  return { x: clamp(x, bounds.x, bounds.x + bounds.width - Math.min(compactWidth, bounds.width)), y: bottom - FOCUS_COMPACT_HEIGHT - inset }
 }
 export function isBottomDockCandidate(anchor: FocusAnchor, workArea: Area) {
   const bottom = workArea.y + workArea.height
   return anchor.y + FOCUS_COMPACT_HEIGHT >= bottom - 64 && anchor.y <= bottom + 120
 }
-export function bottomDockLayout(requestedHeight: number, bounds: Area, workArea: Area, requestedWidth = FOCUS_WIDTH, compactWidth = FOCUS_WIDTH) {
-  const anchor = bottomDockAnchor(bounds, workArea, compactWidth)
+export function bottomDockLayout(requestedHeight: number, bounds: Area, workArea: Area, requestedWidth = FOCUS_WIDTH, compactWidth = FOCUS_WIDTH, requestedX?: number) {
+  const anchor = bottomDockAnchor(bounds, workArea, compactWidth, requestedX)
   return focusWindowLayout(anchor, Math.min(requestedHeight, anchor.y - bounds.y + FOCUS_COMPACT_HEIGHT), bounds, requestedWidth, compactWidth, undefined, true)
 }
 export function menuBarWindowLayout(tray: Area, requestedHeight: number, workArea: Area, requestedWidth = FOCUS_WIDTH, compactWidth = FOCUS_WIDTH) {

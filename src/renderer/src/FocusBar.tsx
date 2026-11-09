@@ -78,7 +78,8 @@ export function FocusBar() {
   const shell = useRef<HTMLElement>(null)
   const pull = useRef<{ id: number; y: number; moved: boolean; direction: number } | null>(null)
   const showDetails = expanded
-  function collapse() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false); if (placement.menuBar) window.focusControls?.hide() }
+  function resetDetails() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false) }
+  function collapse() { resetDetails(); if (placement.menuBar) window.focusControls?.hide() }
   function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false) }
   function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setAppearanceOpen(false); setSyncOpen(false) }
   useEffect(() => { if (expanded) hints.dismiss('pull') }, [expanded])
@@ -115,10 +116,11 @@ export function FocusBar() {
   }
   useEffect(() => {
     const offDetails = window.focusControls?.onOpenDetails?.(() => { setExpanded(true); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false) })
+    const offCollapse = window.focusControls?.onCollapse?.(resetDetails)
     const offPlacement = window.focusControls?.onPlacement(setPlacement)
     const offCalendar = window.focusControls?.onOpenCalendar(openCalendar)
     const offSettings = window.focusControls?.onOpenSettings(() => openConnections())
-    return () => { offDetails?.(); offPlacement?.(); offCalendar?.(); offSettings?.() }
+    return () => { offDetails?.(); offCollapse?.(); offPlacement?.(); offCalendar?.(); offSettings?.() }
   }, [])
   useLayoutEffect(() => {
     if (!shell.current) return
