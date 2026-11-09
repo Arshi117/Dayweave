@@ -35,15 +35,16 @@ If opening fails, report the Mac chip, macOS version and exact error message. Do
 
 ## Upcoming Mac presentations (source only)
 
-The current source offers **顶部菜单栏** and **桌面悬浮条** from the status item's right-click menu. The item shows the event name and countdown in either presentation, shortening long names without splitting emoji; its tooltip retains the full title. Menu-bar mode opens a transient panel below the item and closes on focus loss. Floating mode keeps a draggable desktop strip visible, with the same pull handle, event actions, strip resizing and calendar as Windows. The selected presentation and floating position survive restarts and mode changes. Mac does not snap to the Windows taskbar. **始终置顶** is optional. The linked 0.1.2 downloads do not contain these source changes.
+The current source offers **顶部菜单栏** and **桌面悬浮条**. Drag the status item down to float; drag the strip back to the top to dock. The popup strip supports the same drag. Mode commands remain in the right-click menu. The item shows the event name and countdown in either presentation, shortening long names without splitting emoji; its tooltip retains the full title. Menu-bar mode opens a panel below the item. Floating mode has the same pull handle, event actions, strip resizing and calendar as Windows. Outside clicks first close the calendar, then collapse details; compact floating strips stay visible and menu-bar popups hide. Open editors are protected. The selected presentation and floating position survive restarts and mode changes. Mac does not snap to the Windows taskbar. **始终置顶** is optional. The linked 0.1.2 downloads do not contain these source changes.
 
 Before distributing an updated Mac package, verify on a real Mac:
 
-- Switch presentations from the right-click menu. Drag the floating strip in both axes, switch to the menu bar and back, and restart: its chosen position should return. Clicking another app should leave a floating strip visible while hiding a menu-bar panel.
+- Drag the status item down, move the resulting strip in both axes, then drag it back to the top menu bar. Repeat from the popup strip. A click or small jitter must not detach, and releasing a drag must not trigger show/hide. Switch modes through the menu and restart: the floating position should return.
+- Expand the calendar, click outside twice: the first click closes only the calendar, the second collapses details. Repeat in floating mode and menu-bar mode. Try outside clicks with an editor open; it must remain open.
 - Check the event name/countdown, long Chinese names, emoji and full tooltip. Complete or extend the arrangement and confirm updates continue while hidden.
 - Resize the floating strip and calendar. Check small displays, screen edges, different system Dock positions and display changes.
-- Check keyboard shortcuts, sleep/wake, full-screen spaces and **始终置顶**. Click outside a menu-bar panel and click the icon again without immediately reopening it.
-- Create 5-, 15- and 45-minute events: there should be no half-rendered text. Confirm exact times, keyboard access and complete details remain available.
+- Check keyboard shortcuts, sleep/wake, full-screen spaces and **始终置顶**. Check dragging and outside clicks on both arm64 and Intel Macs; pointer state reads use CoreGraphics without an event tap.
+- Create adjacent 1-, 5-, 15- and 45-minute events, including midnight: every event needs a readable title card, with no clipped text or overlapping labels. A short event's left rail must retain its real duration. Confirm exact times, keyboard access and complete details remain available.
 
 The packaged-launch smoke test checks default menu-bar startup and the preload bridge. Host-side controller tests cover presentation switching and persistent floating bounds; native Mac testing is still required.
 

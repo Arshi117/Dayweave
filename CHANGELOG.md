@@ -3,9 +3,10 @@
 ## Unreleased
 
 - Offer Mac menu-bar and freely draggable desktop-strip presentations, with the same event name/countdown, saved floating position, resizing and mode switching.
+- Drag directly from the Mac status item or popup strip to float, and drag back to the top menu bar to dock.
 - Let Windows strips dock and slide across the entire bottom taskbar, keep their dock height and remember their horizontal position. Open the calendar on the available side near screen edges.
-- Keep an optional Mac **始终置顶** preference for the transient panel and dismiss it on focus loss.
-- Fit short-event labels to their actual height: use a marker, one title line or fuller details without changing the scheduled duration. Retain full event names and times for inspection and editing.
+- Keep an optional Mac **始终置顶** preference. On both platforms, outside desktop clicks close the calendar first, then collapse details; protect open event editors.
+- Give even 1–5 minute events a readable title card, a separate true-duration rail and collision-aware label lanes. Preserve scheduled times and full title/time inspection.
 - Simplify the interactive website around Windows taskbar sliding and both Mac presentations; remove redundant helper copy and the homepage update/beta captions.
 
 ## 0.1.2 — 2026-11-08

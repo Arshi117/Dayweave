@@ -53,6 +53,9 @@ declare global {
   interface Window {
     focusControls?: {
       hide: () => void
+      manualStripDrag?: boolean
+      beginStripDrag?: () => void
+      onOutsideClick?: (listener: () => void) => () => void
       setMenuBarStatus?: (status: import('../../shared/focus-menu').FocusMenuStatus) => void
       onOpenDetails?: (listener: () => void) => () => void
       onCollapse?: (listener: () => void) => () => void

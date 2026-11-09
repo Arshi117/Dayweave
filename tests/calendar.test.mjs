@@ -36,9 +36,22 @@ test('midnight boundaries and invalid time ranges are handled', () => {
   assert.equal(isTimedEntry({ ...event('task', '09:00', '10:00'), kind: 'deadline' }), false)
 })
 
-test('short appointments keep their real height and only render content that fits', () => {
-  for (const [minutes, density, showTime, showLocation] of [[1, 'marker', false, false], [5, 'marker', false, false], [15, 'compact', false, false], [30, 'compact', false, false], [45, 'standard', true, false], [60, 'full', true, false], [90, 'full', true, true]]) {
+test('short appointments retain readable labels and a separate true-duration rail', () => {
+  for (const [minutes, density, showTime, showLocation] of [[1, 'compact', false, false], [5, 'compact', false, false], [15, 'compact', false, false], [30, 'compact', false, false], [45, 'standard', true, false], [60, 'full', true, false], [90, 'full', true, true]]) {
     const view = calendarEventLayout(9 * 60, 9 * 60 + minutes)
-    assert.deepEqual(view, { height: minutes * 1.2, density, showTime, showLocation })
+    assert.deepEqual(view, { top: 648, height: Math.max(22, minutes * 1.2), durationHeight: minutes * 1.2, durationOffset: 0, density, showTime, showLocation })
   }
+})
+
+test('adjacent short labels get separate lanes without changing stored times, including midnight', () => {
+  const entries = [event('a', '09:00', '09:01'), event('b', '09:01', '09:06'), event('c', '09:30', '09:35')]
+  const result = layoutDay(entries, 22)
+  assert.notEqual(result[0].lane, result[1].lane)
+  assert.equal(result[2].laneCount, 1)
+  assert.deepEqual(result.map(item => item.entry), entries)
+  const midnight = calendarEventLayout(1439, 1440)
+  assert.equal(midnight.top + midnight.height, 1728)
+  assert.ok(Math.abs(midnight.durationOffset + midnight.durationHeight - midnight.height) < 1e-9)
+  const late = layoutDay([event('a', '23:58', '23:59'), event('b', '23:59', '24:00')], 22)
+  assert.notEqual(late[0].lane, late[1].lane)
 })

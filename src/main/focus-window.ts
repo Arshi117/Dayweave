@@ -6,6 +6,7 @@ import { GoogleCalendarConnection } from './google-calendar'
 import { MicrosoftTodoConnection } from './microsoft-todo'
 import { CalendarLinks } from './calendar-links'
 import { createTaskbarProbe } from './taskbar-visibility'
+import { createPointerReader, type PointerSample } from './pointer-state'
 import { shouldRecoverDock } from '../shared/dock-visibility'
 import { readFocusMenuStatus, type FocusMenuStatus } from '../shared/focus-menu'
 import { FOCUS_WIDTH, FOCUS_COMPACT_HEIGHT, FOCUS_GAP, FOCUS_PADDING, DEFAULT_FOCUS_DIMENSIONS, focusDimensions, focusWindowLayout, bottomDockLayout, menuBarWindowLayout, isBottomDockCandidate, type FocusAnchor, type FocusDimensions, type ResizeTarget, type ResizeEdge } from '../shared/focus-window-layout'
@@ -34,7 +35,11 @@ export class FocusWindow {
   private docked = process.platform === 'win32'
   private alwaysOnTop = true
   private menuBar = process.platform === 'darwin'
-  private menuBarBlurredAt = 0
+  private dragEndedAt = 0
+  private stripDrag: { source: 'tray' | 'strip'; origin: FocusAnchor; anchor: FocusAnchor; active: boolean } | null = null
+  private pointerTimer: NodeJS.Timeout | null = null
+  private readPointer: (() => PointerSample) | null = null
+  private pointerWasDown = false
   private menuBarBounds: (() => Electron.Rectangle | undefined) | null = null
   private menuStatus: FocusMenuStatus = { title: 'Dayweave', timer: '' }
   private statusListener: ((status: FocusMenuStatus) => void) | null = null
@@ -49,6 +54,7 @@ export class FocusWindow {
     this.microsoft = new MicrosoftTodoConnection(directory, state => this.window?.webContents.send('focus:microsoft-state', state))
     this.links = new CalendarLinks(directory, state => this.window?.webContents.send('focus:links-state', state))
     const allowed = (id: number) => this.window?.webContents.id === id
+    ipcMain.on('focus:strip-drag', event => { if (allowed(event.sender.id)) this.beginStripDrag('strip') })
     ipcMain.on('focus:menu-status', (event, value: unknown) => {
       if (process.platform !== 'darwin' || !allowed(event.sender.id)) return
       const status = readFocusMenuStatus(value)
@@ -185,7 +191,7 @@ export class FocusWindow {
     // Let the quiet-period timer finish it so snapping does not fight each move.
     window.on('moved', () => { if (!this.applyingBounds && process.platform !== 'darwin' && this.nativeMoving) this.finishNativeMove() })
     window.on('close', event => { event.preventDefault(); window.hide() })
-    window.on('blur', () => { this.finishDimensionResize(); if (this.menuBar) { this.menuBarBlurredAt = Date.now(); window.hide() } })
+    window.on('blur', () => this.finishDimensionResize())
     window.webContents.on('render-process-gone', () => { if (!window.isDestroyed()) window.reload() })
     if (process.env.ELECTRON_RENDERER_URL) {
       const url = new URL(process.env.ELECTRON_RENDERER_URL)
@@ -195,6 +201,11 @@ export class FocusWindow {
     this.keepVisible()
     await Promise.all([this.feed.load(), this.google.load(), this.ticktick.load(), this.microsoft.load(), this.links.load()])
     if (!this.menuBar) this.show()
+    try {
+      this.readPointer = createPointerReader()
+      this.pointerWasDown = this.readPointer?.().down ?? false
+      if (this.readPointer) this.pointerTimer = setInterval(() => this.pollPointer(), 32)
+    } catch (error) { console.warn('Pointer state monitoring unavailable:', error instanceof Error ? error.message : String(error)) }
     if (process.platform === 'win32') {
       try {
         const probe = createTaskbarProbe(window)
@@ -233,6 +244,49 @@ export class FocusWindow {
     this.statusListener?.(this.menuStatus)
   }
   isMenuBarMode() { return this.menuBar }
+  beginStripDrag(source: 'tray' | 'strip', point = screen.getCursorScreenPoint()) {
+    if (process.platform !== 'darwin' || !this.readPointer || !this.window) return
+    const bounds = this.window.getContentBounds()
+    const anchor = source === 'tray' ? { x: point.x - this.dimensions.stripWidth / 2, y: point.y - 16 }
+      : { x: bounds.x + (this.left ? bounds.width - this.dimensions.stripWidth : 0), y: bounds.y }
+    this.stripDrag = { source, origin: point, anchor, active: false }
+  }
+  private pollPointer() {
+    if (!this.readPointer || !this.window || this.window.isDestroyed()) return
+    const { point, down } = this.readPointer()
+    const pressed = down && !this.pointerWasDown
+    this.pointerWasDown = down
+    const drag = this.stripDrag
+    if (drag) {
+      const dx = point.x - drag.origin.x, dy = point.y - drag.origin.y
+      if (down && !drag.active && Math.hypot(dx, dy) > 6) {
+        drag.active = true
+        this.menuBar = false; this.docked = false; this.expanded = false; this.calendarOpen = false; this.contentHeight = FOCUS_COMPACT_HEIGHT
+        this.window.webContents.send('focus:collapse')
+        this.window.showInactive()
+        this.statusListener?.(this.menuStatus)
+      }
+      if (drag.active) {
+        this.anchor = { x: drag.anchor.x + dx, y: drag.anchor.y + dy }
+        this.keepVisible()
+      }
+      if (!down) {
+        this.stripDrag = null
+        if (drag.active) {
+          this.dragEndedAt = Date.now()
+          const display = screen.getDisplayMatching({ ...point, width: 1, height: 1 })
+          if (point.y <= display.workArea.y + 12) this.useMenuBar()
+          else this.savePosition()
+        }
+      }
+      return
+    }
+    if (!pressed || !this.window.isVisible() || this.nativeMoving || this.dimensionGesture) return
+    const inside = (rect: Electron.Rectangle) => point.x >= rect.x && point.x < rect.x + rect.width && point.y >= rect.y && point.y < rect.y + rect.height
+    const tray = this.menuBarBounds?.()
+    if (inside(this.window.getContentBounds()) || tray && inside(tray)) return
+    if (this.expanded || this.calendarOpen) this.window.webContents.send('focus:outside-click')
+  }
   useFloatingStrip() {
     if (process.platform !== 'darwin') return
     this.finishDimensionResize()
@@ -258,8 +312,7 @@ export class FocusWindow {
     this.statusListener?.(this.menuStatus)
   }
   toggleFromMenuBar() {
-    // Clicking the status item can blur and hide the panel before `click` fires.
-    if (this.menuBar && Date.now() - this.menuBarBlurredAt < 200) return
+    if (this.stripDrag?.active || Date.now() - this.dragEndedAt < 200) return
     this.toggle()
   }
   setMenuBarAnchor(provider: () => Electron.Rectangle | undefined) { this.menuBarBounds = provider; if (this.menuBar) this.keepVisible() }
@@ -338,6 +391,7 @@ export class FocusWindow {
   openCalendar() { this.show(); this.window?.webContents.send('focus:open-calendar') }
   openSettings() { this.show(); this.window?.webContents.send('focus:open-settings') }
   stop() {
+    if (this.pointerTimer) clearInterval(this.pointerTimer)
     if (this.dockVisibilityTimer) clearInterval(this.dockVisibilityTimer)
     if (this.positionTimer) clearTimeout(this.positionTimer)
     this.savePosition()

@@ -7,6 +7,13 @@ import type { CalendarLinksState } from '../shared/import-links'
 
 contextBridge.exposeInMainWorld('focusControls', {
   hide: () => ipcRenderer.send('focus:hide'),
+  manualStripDrag: process.platform === 'darwin',
+  beginStripDrag: () => ipcRenderer.send('focus:strip-drag'),
+  onOutsideClick: (listener: () => void) => {
+    const handler = () => listener()
+    ipcRenderer.on('focus:outside-click', handler)
+    return () => ipcRenderer.removeListener('focus:outside-click', handler)
+  },
   setMenuBarStatus: (status: import('../shared/focus-menu').FocusMenuStatus) => ipcRenderer.send('focus:menu-status', status),
   onOpenDetails: (listener: () => void) => {
     const handler = () => listener()

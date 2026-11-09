@@ -82,6 +82,11 @@ export function FocusBar() {
   function collapse() { resetDetails(); if (placement.menuBar) window.focusControls?.hide() }
   function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false) }
   function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setAppearanceOpen(false); setSyncOpen(false) }
+  useEffect(() => window.focusControls?.onOutsideClick?.(() => {
+    if (document.querySelector('dialog[open], [aria-modal="true"]')) return
+    if (calendar) setCalendar(false)
+    else if (expanded) collapse()
+  }), [calendar, expanded, placement.menuBar])
   useEffect(() => { if (expanded) hints.dismiss('pull') }, [expanded])
   useEffect(() => {
     if (expanded || hints.seen.move) return
@@ -263,7 +268,10 @@ export function FocusBar() {
     }}>
     <div className="focus-sidebar">
     <div className="focus-strip">
-    <section className={'focus-pill' + (problem ? ' has-problem' : '')} aria-label="当前安排悬浮条" title={placement.menuBar ? '当前安排' : '按住小条拖动；点击或拉动边缘细横线展开'}>
+    <section className={'focus-pill' + (problem ? ' has-problem' : '') + (window.focusControls?.manualStripDrag ? ' manual-drag' : '')} aria-label="当前安排悬浮条" title={placement.menuBar ? '按住拖到桌面，变为悬浮条' : '按住小条拖动；点击或拉动边缘细横线展开'} onPointerDown={event => {
+      if (event.button !== 0 || !window.focusControls?.manualStripDrag || (event.target as Element).closest('button,input,select,a,[role="button"]')) return
+      event.preventDefault(); window.focusControls.beginStripDrag?.()
+    }}>
       <span className={'focus-pill-marker' + (view.current ? ' is-active' : '')}><span className="focus-status-badge">{view.current ? <Clock3 size={12} strokeWidth={1.7} /> : selectedTask ? <ListTodo size={12} strokeWidth={1.7} /> : <CalendarDays size={12} strokeWidth={1.7} />}</span></span>
       <div className="focus-pill-summary">
         <span className="focus-pill-title" title={view.current?.title ?? selectedTask?.title ?? view.next?.title}>{view.current?.title ?? selectedTask?.title ?? view.next?.title ?? '暂时空闲'}</span>

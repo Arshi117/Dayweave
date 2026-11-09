@@ -1,10 +1,10 @@
-/* Match content to the true time-block height; never enlarge a short event. */
+/* A readable label has a minimum height; the left rail retains actual duration. */
 .week-calendar :is(button.calendar-event, div.selection-block)[data-density] { padding: 6px; gap: 3px; }
 .week-calendar :is(button.calendar-event, div.selection-block)[data-density] > strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 15px; }
 .week-calendar :is(button.calendar-event, div.selection-block)[data-density] > span:not(.event-resize) { line-height: 12px; }
 .week-calendar :is(button.calendar-event, div.selection-block)[data-density='standard'] > strong { -webkit-line-clamp: 1; }
 .week-calendar :is(button.calendar-event, div.selection-block)[data-density='compact'] { padding: 1px 4px; justify-content: center; gap: 0; }
-.week-calendar :is(button.calendar-event, div.selection-block)[data-density='compact'] > strong { display: block; width: 100%; font-size: 10px; line-height: 12px; white-space: nowrap; word-break: normal; overflow: hidden; text-overflow: ellipsis; }
-.week-calendar :is(button.calendar-event, div.selection-block)[data-density='marker'] { padding: 0; border-top: 0; border-bottom: 0; border-radius: 3px; }
-.week-calendar :is(button.calendar-event, div.selection-block)[data-density='marker'] > * { display: none; }
+.week-calendar :is(button.calendar-event, div.selection-block)[data-density='compact'] > strong { display: block; width: 100%; font-size: 11px; line-height: 16px; white-space: nowrap; word-break: normal; overflow: hidden; text-overflow: ellipsis; }
+.week-calendar button.calendar-event[data-density='compact'] { border-left-color: transparent; padding-left: 6px; }
+.week-calendar button.calendar-event[data-density='compact']::before { content: ''; position: absolute; left: 0; top: var(--duration-offset, 0px); width: 3px; height: var(--duration-height, 100%); background: rgb(var(--event-rgb)); border-radius: 2px; pointer-events: none; }
 .week-calendar button.calendar-event[data-density]:focus-visible { outline: 2px solid var(--dw-accent, #a6c9ac); outline-offset: 2px; z-index: 4; }

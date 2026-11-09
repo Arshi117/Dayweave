@@ -38,24 +38,24 @@ class FakeConnection {
   stop() {}
 }
 const handlers = new EventEmitter()
-globalThis.__macFocusFixture = {
+const fixture = globalThis.__macFocusFixture = {
   BrowserWindow: FakeWindow, dialog: {},
   ipcMain: { handle() {}, on: handlers.on.bind(handlers) },
   screen: { getPrimaryDisplay: () => display, getDisplayMatching: () => display },
-  FakeConnection,
+  FakeConnection, pointer: { point: { x: 800, y: 400 }, down: false },
 }
 const hooks = registerHooks({
   resolve(specifier, context, next) {
     if (context.parentURL?.endsWith('/src/main/focus-window.ts')) {
       if (specifier === 'electron') return { url: 'fixture:electron', shortCircuit: true }
-      if (['./calendar-subscription', './google-calendar', './microsoft-todo', './calendar-links', './taskbar-visibility'].includes(specifier)) return { url: 'fixture:connections', shortCircuit: true }
+      if (['./calendar-subscription', './google-calendar', './microsoft-todo', './calendar-links', './taskbar-visibility', './pointer-state'].includes(specifier)) return { url: 'fixture:connections', shortCircuit: true }
     }
     return next(specifier, context)
   },
   load(url, context, next) {
     if (url.endsWith('/src/main/focus-window.ts')) return { format: 'module', shortCircuit: true, source: 'const __dirname = "/fixture";\n' + ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText }
     if (url === 'fixture:electron') return { format: 'module', shortCircuit: true, source: 'export const { BrowserWindow, dialog, ipcMain, screen } = globalThis.__macFocusFixture' }
-    if (url === 'fixture:connections') return { format: 'module', shortCircuit: true, source: 'const C = globalThis.__macFocusFixture.FakeConnection; export { C as CalendarSubscription, C as GoogleCalendarConnection, C as MicrosoftTodoConnection, C as CalendarLinks }; export const validCalendarRange = () => true; export const createTaskbarProbe = () => null' }
+    if (url === 'fixture:connections') return { format: 'module', shortCircuit: true, source: 'const C = globalThis.__macFocusFixture.FakeConnection; export { C as CalendarSubscription, C as GoogleCalendarConnection, C as MicrosoftTodoConnection, C as CalendarLinks }; export const validCalendarRange = () => true; export const createTaskbarProbe = () => null; export const createPointerReader = () => () => globalThis.__macFocusFixture.pointer' }
     return next(url, context)
   },
 })
@@ -85,9 +85,9 @@ test('Mac menu-bar mode hides the desktop strip, restores after restart and anch
     assert.ok(win.bounds.x + win.bounds.width <= area.x + area.width)
     assert.ok(win.bounds.y + win.bounds.height <= area.y + area.height)
     win.emit('blur')
-    assert.equal(win.visible, false)
+    assert.equal(win.visible, true, 'blur alone must not close the calendar and details together')
     focus.toggleFromMenuBar()
-    assert.equal(win.visible, false, 'a blur immediately before the status-item click must not reopen the panel')
+    assert.equal(win.visible, false, 'a status-item click still toggles the panel after blur')
     const statuses = []
     focus.onMenuStatus(status => statuses.push(status))
     handlers.emit('focus:menu-status', { sender: { id: 99 } }, { title: 'foreign', timer: '12:34' })
@@ -144,7 +144,47 @@ test('Mac floating strips move freely, persist their position and return from me
   } finally {
     focus?.stop()
     Object.defineProperty(process, 'platform', originalPlatform)
-    delete globalThis.__macFocusFixture
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('Mac drags directly from the status item to the desktop and back; outside clicks remain separate steps', async () => {
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
+  const directory = mkdtempSync(join(tmpdir(), 'dayweave-mac-drag-'))
+  Object.defineProperty(process, 'platform', { value: 'darwin' })
+  let focus
+  const sample = (x, y, down) => { fixture.pointer = { point: { x, y }, down }; focus.pollPointer() }
+  try {
+    handlers.removeAllListeners()
+    fixture.pointer = { point: { x: 1250, y: 12 }, down: false }
+    focus = new FocusWindow(directory, 'preload'); await focus.create()
+    focus.setMenuBarAnchor(() => ({ x: 1200, y: 0, width: 120, height: 25 }))
+    const win = FakeWindow.latest
+    focus.beginStripDrag('tray', { x: 1250, y: 12 })
+    sample(1251, 13, true)
+    assert.equal(win.visible, false, 'a click or small jitter must not detach')
+    sample(1000, 300, true); sample(900, 400, false)
+    assert.equal(win.visible, true)
+    assert.equal(focus.isMenuBarMode(), false)
+    assert.deepEqual(win.bounds, { x: 750, y: 384, width: 300, height: 44 })
+    focus.toggleFromMenuBar()
+    assert.equal(win.visible, true, 'a click emitted after dragging must not hide the strip')
+    handlers.emit('focus:resize', { sender: { id: 1 } }, 600, true, true)
+    win.messages.length = 0
+    sample(10, 890, true); sample(10, 890, false); sample(10, 890, true)
+    assert.equal(win.messages.filter(([channel]) => channel === 'focus:outside-click').length, 2, 'both outside clicks reach the renderer, including after blur')
+    sample(10, 890, false)
+    const origin = { x: win.bounds.x + 30, y: win.bounds.y + 16 }
+    sample(origin.x, origin.y, true)
+    assert.equal(win.messages.filter(([channel]) => channel === 'focus:outside-click').length, 2, 'inside controls do not collapse')
+    focus.beginStripDrag('strip', origin)
+    sample(1250, 10, true); sample(1250, 10, false)
+    assert.equal(focus.isMenuBarMode(), true)
+    assert.equal(win.visible, false)
+    assert.equal(JSON.parse(readFileSync(join(directory, 'focus-window.json'), 'utf8')).menuBar, true)
+  } finally {
+    focus?.stop()
+    Object.defineProperty(process, 'platform', originalPlatform)
     rmSync(directory, { recursive: true, force: true })
   }
 })

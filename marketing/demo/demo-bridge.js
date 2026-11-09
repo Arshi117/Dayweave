@@ -55,6 +55,7 @@
     setMenuBarStatus:status=>send('menu-status',{status}),
     onOpenDetails:subscribe('details'),
     onCollapse:subscribe('collapse'),
+    onOutsideClick:subscribe('outside-click'),
     resize:(height,calendar=false,expanded=false)=>send('layout',{height,calendar,expanded}),
     beginDimensionResize:(target,edge)=>send('resize-start',{target,edge,...latestPointer}),
     moveDimensionResize:()=>send('resize-move',latestPointer),endDimensionResize:()=>send('resize-end'),
@@ -78,6 +79,7 @@
     const {type,...data}=event.data;
     if(type==='placement'){placement=data.placement;emit('placement',placement)}
     if(type==='collapse')emit('collapse');
+    if(type==='outside-click')emit('outside-click');
     if(type==='open-details')emit('details');
     if(type==='experience'){
       const name=data.name;
@@ -103,7 +105,6 @@
   // simulated here; no desktop component, stylesheet or event handler is replaced.
   let drag=null;
   addEventListener('pointerdown',event=>{
-    if(placement.menuBar)return;
     const pill=event.target.closest('.focus-pill');if(!pill||event.button!==0||event.target.closest('button,input,select,a'))return;
     drag={id:event.pointerId,pill};pill.setPointerCapture(event.pointerId);send('drag-start',{x:event.screenX,y:event.screenY});
   });

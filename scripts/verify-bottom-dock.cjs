@@ -43,7 +43,11 @@ app.on('browser-window-created', (_, win) => {
       win.webContents.send('focus:open-calendar')
       await wait(()=>evaluate('Boolean(document.querySelector(".week-calendar"))'))
       await wait(()=>evaluate('document.querySelector(".focus-shell").classList.contains("calendar-left")'))
-      console.log(JSON.stringify({passed:true,directory,checks:['native taskbar bounds','topmost dock','upward dock expansion','native drag detach','downward floating expansion','snap at chosen x','horizontal taskbar sliding','locked taskbar height','persisted horizontal position','calendar opens left near right edge'],display:display.bounds,workArea:area,dock:win.getContentBounds()}))
+      win.webContents.send('focus:outside-click')
+      await wait(()=>evaluate('!document.querySelector(".week-calendar") && Boolean(document.querySelector(".focus-details"))'))
+      win.webContents.send('focus:outside-click')
+      await wait(()=>evaluate('!document.querySelector(".focus-details") && Boolean(document.querySelector(".focus-pill"))'))
+      console.log(JSON.stringify({passed:true,directory,checks:['native taskbar bounds','topmost dock','upward dock expansion','native drag detach','downward floating expansion','snap at chosen x','horizontal taskbar sliding','locked taskbar height','persisted horizontal position','calendar opens left near right edge','outside-click closes calendar first','second outside-click collapses details'],display:display.bounds,workArea:area,dock:win.getContentBounds()}))
       clearTimeout(timeout); app.exit(0)
     } catch(error) { console.error(error); clearTimeout(timeout); app.exit(1) }
   })

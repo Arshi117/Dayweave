@@ -68,7 +68,8 @@ function createTray() {
       tray?.setToolTip('Dayweave · ' + status.title + (status.timer ? ' · ' + status.timer : ''))
       if (focus?.isMenuBarMode()) focus.keepVisible()
     })
-    tray.on('click', () => { if (focus?.isMenuBarMode()) focus.toggleFromMenuBar(); else focus?.toggle() })
+    tray.on('mouse-down', (_event, point) => focus?.beginStripDrag('tray', point))
+    tray.on('click', () => focus?.toggleFromMenuBar())
     tray.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
   } else {
     tray.setContextMenu(trayMenu())
