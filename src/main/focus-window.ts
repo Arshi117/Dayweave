@@ -44,6 +44,7 @@ export class FocusWindow {
   private menuStatus: FocusMenuStatus = { title: 'Dayweave', timer: '' }
   private statusListener: ((status: FocusMenuStatus) => void) | null = null
   private nativeMoving = false
+  private dockDrag: { cursor: FocusAnchor; anchor: FocusAnchor } | null = null
   private dockVisibilityTimer: NodeJS.Timeout | null = null
   private readonly settingsFile: string
   constructor(private directory: string, private preload: string) {
@@ -172,17 +173,17 @@ export class FocusWindow {
     window.on('will-move', (event, proposedBounds) => {
       if (this.menuBar) { event.preventDefault(); return }
       this.nativeMoving = true
-      if (process.platform === 'win32' && this.docked) {
-        const anchor = { x: proposedBounds.x + (this.left ? proposedBounds.width - this.dimensions.stripWidth : 0), y: proposedBounds.y + (this.above ? proposedBounds.height - FOCUS_COMPACT_HEIGHT : 0) }
-        const display = screen.getDisplayMatching({ ...anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
-        if (isBottomDockCandidate(anchor, display.workArea)) {
-          event.preventDefault()
-          this.anchor = anchor
-          this.keepVisible()
-          if (this.positionTimer) clearTimeout(this.positionTimer)
-          this.positionTimer = setTimeout(() => this.finishNativeMove(), 300)
-          return
-        }
+      if (process.platform === 'win32' && (this.docked || this.dockDrag)) {
+        event.preventDefault()
+        const cursor = screen.getCursorScreenPoint()
+        // Repositioning a docked window changes Windows' next proposed bounds.
+        // Keep the original cursor/strip relationship for the whole gesture,
+        // so small moves accumulate instead of being reset by the taskbar lock.
+        this.dockDrag ??= { cursor, anchor: { x: proposedBounds.x + (this.left ? proposedBounds.width - this.dimensions.stripWidth : 0), y: proposedBounds.y + (this.above ? proposedBounds.height - FOCUS_COMPACT_HEIGHT : 0) } }
+        this.updateDockDrag(cursor)
+        if (this.positionTimer) clearTimeout(this.positionTimer)
+        this.positionTimer = setTimeout(() => this.finishNativeMove(), 300)
+        return
       }
       this.docked = false
     })
@@ -235,12 +236,21 @@ export class FocusWindow {
   }
   private finishNativeMove() {
     if (!this.window || this.window.isDestroyed()) return
+    if (this.dockDrag && this.readPointer?.().down) return
     this.nativeMoving = false
+    this.dockDrag = null
     if (this.positionTimer) { clearTimeout(this.positionTimer); this.positionTimer = null }
     const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
     this.docked = process.platform === 'win32' && isBottomDockCandidate(this.anchor, display.workArea)
     this.keepVisible()
     this.savePosition()
+  }
+  private updateDockDrag(cursor: FocusAnchor) {
+    if (!this.dockDrag) return
+    this.anchor = { x: this.dockDrag.anchor.x + cursor.x - this.dockDrag.cursor.x, y: this.dockDrag.anchor.y + cursor.y - this.dockDrag.cursor.y }
+    const display = screen.getDisplayMatching({ ...this.anchor, width: this.dimensions.stripWidth, height: FOCUS_COMPACT_HEIGHT })
+    this.docked = isBottomDockCandidate(this.anchor, display.workArea)
+    this.keepVisible()
   }
   dockToBottom() {
     if (process.platform !== 'win32') return
@@ -263,6 +273,11 @@ export class FocusWindow {
     const { point, down } = this.readPointer()
     const pressed = down && !this.pointerWasDown
     this.pointerWasDown = down
+    if (process.platform === 'win32' && this.dockDrag) {
+      if (down) this.updateDockDrag(point)
+      else this.finishNativeMove()
+      return
+    }
     const drag = this.stripDrag
     if (drag) {
       const dx = point.x - drag.origin.x, dy = point.y - drag.origin.y

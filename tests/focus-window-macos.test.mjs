@@ -41,7 +41,7 @@ const handlers = new EventEmitter()
 const fixture = globalThis.__macFocusFixture = {
   BrowserWindow: FakeWindow, dialog: {},
   ipcMain: { handle() {}, on: handlers.on.bind(handlers) },
-  screen: { getPrimaryDisplay: () => display, getDisplayMatching: () => display },
+  screen: { getPrimaryDisplay: () => display, getDisplayMatching: () => display, getCursorScreenPoint: () => fixture.pointer.point },
   FakeConnection, pointer: { point: { x: 800, y: 400 }, down: false },
 }
 const hooks = registerHooks({
@@ -62,6 +62,37 @@ const hooks = registerHooks({
 
 const { FocusWindow } = await import('../src/main/focus-window.ts')
 hooks.deregister()
+
+test('Windows taskbar drags accumulate cursor movement, slide horizontally and detach despite repeated small native proposals', async () => {
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
+  const directory = mkdtempSync(join(tmpdir(), 'dayweave-windows-detach-'))
+  Object.defineProperty(process, 'platform', { value: 'win32' })
+  let focus
+  try {
+    handlers.removeAllListeners()
+    fixture.pointer = { point: { x: 120, y: 865 }, down: false }
+    focus = new FocusWindow(directory, 'preload'); await focus.create()
+    const win = FakeWindow.latest, start = { ...win.bounds }
+    const propose = () => win.emit('will-move', { preventDefault() {} }, { ...win.bounds, y: win.bounds.y - 2 })
+    fixture.pointer.down = true; propose()
+    fixture.pointer = { point: { x: 320, y: 865 }, down: true }; propose()
+    assert.equal(win.bounds.x, start.x + 200)
+    assert.equal(win.bounds.y, start.y, 'horizontal motion stays locked in the taskbar')
+    focus.finishNativeMove() // A pause must not reset a gesture while the button is held.
+    for (const y of [840, 810, 780, 750, 720, 690, 660]) {
+      fixture.pointer = { point: { x: 320, y }, down: true }; propose(); focus.pollPointer()
+    }
+    assert.ok(win.bounds.y < area.y + area.height - 150, 'cursor displacement must detach even when each proposed step is tiny')
+    fixture.pointer.down = false; focus.pollPointer()
+    const saved = JSON.parse(readFileSync(join(directory, 'focus-window.json'), 'utf8'))
+    assert.equal(saved.docked, false)
+    assert.equal(win.messages.filter(([channel]) => channel === 'focus:placement').at(-1)[1].docked, false)
+  } finally {
+    focus?.stop()
+    Object.defineProperty(process, 'platform', originalPlatform)
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 test('Mac menu-bar mode hides the desktop strip, restores after restart and anchors a transient panel beneath the status item', async () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
