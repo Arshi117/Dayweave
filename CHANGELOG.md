@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Google/Microsoft **断开连接** controls that remain available during failed or in-flight reads and remove the disconnected account from source management.
+- Rename linked calendars and imported ICS/PDF sources locally. Keep names across refresh, restart and file replacement, with consistent event/task source labels and encrypted alias storage.
 - Offer Mac menu-bar and freely draggable desktop-strip presentations, with the same event name/countdown, saved floating position, resizing and mode switching.
 - Drag directly from the Mac status item to float, and drag back to the top menu bar to dock. Menu-bar popups show details directly without repeating the compact strip.
 - Show the Mac event name/countdown only in the active presentation: floating mode leaves just the app icon in the menu bar; docking restores its text.

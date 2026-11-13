@@ -123,6 +123,18 @@ export class CalendarLinks {
     if (item) await item.feed.refresh()
     return this.state()
   }
+  async rename(id: string, name: unknown) {
+    if (this.busy || this.stopped) return { ...this.state(), error: '正在处理来源，请稍后重试。' }
+    const item = this.links.get(id)
+    if (!item) return { ...this.state(), error: '该来源已移除。' }
+    this.busy = true
+    try {
+      const result = await item.feed.rename(name)
+      this.error = result.error
+    } catch { this.error = '名称未保存，请填写 1～200 个字符，并检查本机存储后重试。' }
+    finally { this.busy = false; this.publish() }
+    return this.state()
+  }
   async remove(id: string) {
     if (this.busy || this.stopped) return { ...this.state(), error: '正在处理来源，请稍后重试。' }
     const item = this.links.get(id)

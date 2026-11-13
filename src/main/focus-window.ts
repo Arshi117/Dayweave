@@ -110,6 +110,13 @@ export class FocusWindow {
       return this.links.add(value)
     })
     ipcMain.handle('focus:links-refresh', (event, id: unknown) => allowed(event.sender.id) && typeof id === 'string' && id.length <= 100 ? this.links.refresh(id) : null)
+    ipcMain.handle('focus:source-rename', async (event, id: unknown, name: unknown) => {
+      if (!allowed(event.sender.id) || typeof id !== 'string' || id.length > 100) return null
+      const old = id === 'legacy' ? this.feed : id === 'ticktick' ? this.ticktick : null
+      if (old) { const result = await old.rename(name); return { subscription: result.snapshot, error: result.error } }
+      const links = await this.links.rename(id, name)
+      return { links, error: links.error }
+    })
     ipcMain.handle('focus:links-remove', (event, id: unknown) => allowed(event.sender.id) && typeof id === 'string' && id.length <= 100 ? this.links.remove(id) : null)
     ipcMain.handle('focus:links-range', (event, range: unknown) => allowed(event.sender.id) && validCalendarRange(range) ? this.links.setRange(range) : null)
     ipcMain.on('focus:hide', event => { if (allowed(event.sender.id)) this.window?.hide() })

@@ -103,6 +103,10 @@ Timed feed events appear in the calendar and strip. Date-only TickTick items and
 
 Each provider stores authorization or a feed address separately. Removing one does not remove the other connections. Microsoft disconnect clears local authorization; remote consent can be removed in the Microsoft account's app settings. The older Google-hosted iCalendar address remains a fallback while Google account mode is active; independent non-Google feeds remain visible.
 
+Google and Microsoft account pages include **断开连接**, including when a read has failed or a refresh is still running. It clears that account's local authorization and imported data, not the provider's original events/tasks or other sources. Account authorization reads the selected calendars/lists through their APIs; it does not extract a subscription URL.
+
+For linked calendars and imported ICS/PDF sources, use **管理 → 来源 → 重命名 → 保存名称**. Names are local aliases, stored with OS encryption independently of downloaded content. They survive refreshes, restarts and file replacements and apply to the displayed event/task source names. Original calendar text, event identities, titles and times are preserved. PDF recognition also has an editable timetable name before importing. Run `node node_modules/electron/cli.js scripts/verify-source-management.cjs` after building to check disconnect during failed/in-flight reads and source renaming with isolated fixtures.
+
 ## Other calendar subscriptions
 
 ### Local university timetable files

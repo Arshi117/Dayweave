@@ -8,6 +8,7 @@ import type { ImportedTask } from '../shared/imports'
 import { parseCalendarTasks } from './task-feed'
 import { calendarSourceCounts } from './calendar-source'
 import { downloadCalendarResource } from './calendar-download'
+import { SourceDisplayName } from './source-display-name'
 
 const sameRange = (a: CalendarRange | undefined, b: CalendarRange | undefined) => a?.from === b?.from && a?.to === b?.to
 export function validCalendarRange(value: unknown): value is CalendarRange {
@@ -33,17 +34,26 @@ export class CalendarSubscription {
   private timer: NodeJS.Timeout | null = null
   private writes: Promise<void> = Promise.resolve()
   private readonly file: string
+  private readonly displayName: SourceDisplayName
   constructor(directory: string, private changed: (snapshot: SubscriptionSnapshot) => void, private provider: 'ical' | 'ticktick' = 'ical', storageId?: string) {
     if (storageId && !/^link-[0-9a-f-]{36}$/i.test(storageId)) throw new Error('Invalid calendar storage identity.')
     this.file = join(directory, storageId ? storageId + '.json' : provider === 'ticktick' ? 'ticktick-subscription.json' : 'calendar-subscription.json')
+    this.displayName = new SourceDisplayName(this.file + '.name.json')
   }
-  state() { return this.snapshot }
+  state() { return this.displayName.apply(this.snapshot) }
+  async rename(value: unknown) {
+    if (!this.snapshot.configured) return { snapshot: this.state(), error: '该来源尚未连接。' }
+    try { await this.displayName.save(value) }
+    catch { return { snapshot: this.state(), error: '名称未保存，请填写 1～200 个字符，并检查本机存储后重试。' } }
+    this.publish(); return { snapshot: this.state(), error: '' }
+  }
   matches(value: string) { try { return Boolean(this.url) && subscriptionURL(value).href === this.url } catch { return false } }
   start() {
     if (!this.timer) this.timer = setInterval(() => { if (this.url && !this.snapshot.refreshing) void this.refresh() }, (this.provider === 'ticktick' ? 1 : 5) * 60_000)
   }
-  private publish() { this.changed(this.snapshot) }
+  private publish() { this.changed(this.state()) }
   async load() {
+    await this.displayName.load()
     try {
       const stored = JSON.parse(await readFile(this.file, 'utf8'))
       this.url = safeStorage.decryptString(Buffer.from(stored.address, 'base64'))
@@ -98,19 +108,19 @@ export class CalendarSubscription {
     } catch { return { text: '', downloadedAt: 0, error: '暂无可查看的完整源文件，请先刷新此订阅。' } }
   }
   async setRange(range: CalendarRange) {
-    if (!validCalendarRange(range)) return this.snapshot
-    if (sameRange(this.viewedRange, range) && sameRange(this.snapshot.range, range)) return this.snapshot
+    if (!validCalendarRange(range)) return this.state()
+    if (sameRange(this.viewedRange, range) && sameRange(this.snapshot.range, range)) return this.state()
     this.viewedRange = { ...range }
     // An in-flight download reads the latest viewed range before publishing.
-    if (this.snapshot.refreshing || !this.url) return this.snapshot
+    if (this.snapshot.refreshing || !this.url) return this.state()
     return this.refresh(this.url, true)
   }
   async refresh(address = this.url, reuseContent = false, downloadedText?: string) {
-    if (!address) return this.snapshot
-    if (this.snapshot.refreshing) return this.snapshot
+    if (!address) return this.state()
+    if (this.snapshot.refreshing) return this.state()
     let url: URL
     try { url = subscriptionURL(address) }
-    catch (error) { return { ...this.snapshot, error: calendarErrorMessage(error, false) } }
+    catch (error) { return { ...this.state(), error: calendarErrorMessage(error, false) } }
     const revision = ++this.revision
     this.controller = new AbortController()
     const controller = this.controller
@@ -137,14 +147,14 @@ export class CalendarSubscription {
           events = events.map(event => ({ ...event, id: 'ticktick:' + event.id, provider: 'ticktick', calendarName: 'TickTick' }))
         }
       } while (revision === this.revision && !sameRange(range, this.viewedRange))
-      if (revision !== this.revision) return this.snapshot
+      if (revision !== this.revision) return this.state()
       const next: SubscriptionSnapshot = { configured: true, sourceLabel: url.hostname, events, tasks,
         lastSynced: cached ? this.snapshot.lastSynced : Date.now(), refreshing: false, error: '', range, ...calendarMetadata(text), ...report, importWarnings: [...new Set(warnings)],
         addressKind: url.pathname.includes('/public/') ? 'public' : /\/private-[^/]+\//.test(url.pathname) ? 'private' : 'other',
         redactedCount: events.filter(event => /^(busy|忙碌)$/i.test(event.title.trim())).length }
       try { await this.persist(url.href, next, revision) }
       catch { throw new CalendarImportError('storage') }
-      if (revision !== this.revision) return this.snapshot
+      if (revision !== this.revision) return this.state()
       this.url = url.href
       this.content = text
       this.snapshot = next
@@ -167,7 +177,7 @@ export class CalendarSubscription {
         if (succeeded && !sameRange(this.snapshot.range, this.viewedRange)) queueMicrotask(() => { if (revision === this.revision) void this.refresh(this.url, true) })
       }
     }
-    return this.snapshot
+    return this.state()
   }
   async remove() {
     // Serialize removal after any pending write so an old request cannot restore the feed.
@@ -177,8 +187,9 @@ export class CalendarSubscription {
     this.content = ''
     this.snapshot = { configured: false, sourceLabel: '', events: [], lastSynced: null, refreshing: false, error: '' }
     await this.enqueueWrite(async () => { await writeFile(this.file, '{}', 'utf8'); await writeFile(this.file + '.source.json', '{}', 'utf8') })
+    await this.displayName.clear()
     this.publish()
-    return this.snapshot
+    return this.state()
   }
   stop() { if (this.timer) clearInterval(this.timer); ++this.revision; this.controller?.abort() }
 }

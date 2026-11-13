@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ListTodo, RefreshCw } from 'lucide-react'
 import type { SubscriptionSnapshot } from '../../../shared/focus'
 import type { MicrosoftTodoState } from '../../../shared/imports'
@@ -29,24 +29,30 @@ export function TickTickConnection({ state, onState }: { state: SubscriptionSnap
   </section>
 }
 
-export function MicrosoftTodoConnection({ state, onState }: { state: MicrosoftTodoState; onState: (state: MicrosoftTodoState) => void }) {
-  const [pending, setPending] = useState(false), [error, setError] = useState('')
+type MicrosoftAction = 'connect' | 'cancel' | 'refresh' | 'select' | 'disconnect'
+export function MicrosoftTodoConnection({ state, onState, onDisconnected }: { state: MicrosoftTodoState; onState: (state: MicrosoftTodoState) => void; onDisconnected?: () => void }) {
+  const [pending, setPending] = useState<MicrosoftAction | null>(null), [error, setError] = useState('')
+  const request = useRef(0)
   const [selection, setSelection] = useState<string[]>([]), [dirty, setDirty] = useState(false)
   useEffect(() => { if (!dirty) setSelection(state.lists.filter(list => list.selected).map(list => list.id)) }, [state.lists, dirty])
-  async function action(kind: 'connect' | 'cancel' | 'refresh' | 'select') {
+  async function action(kind: MicrosoftAction) {
     const api = window.focusControls
-    if (!api || pending && kind !== 'cancel') return
-    if (kind !== 'cancel') setPending(true)
+    if (!api || pending && kind !== 'cancel' && kind !== 'disconnect') return
+    const current = ++request.current
+    setPending(kind)
     setError('')
     try {
       const result = await (kind === 'connect' ? api.connectMicrosoft() : kind === 'cancel' ? api.cancelMicrosoft()
-        : kind === 'refresh' ? api.refreshMicrosoft() : api.selectMicrosoftLists(selection))
+        : kind === 'refresh' ? api.refreshMicrosoft() : kind === 'disconnect' ? api.disconnectMicrosoft() : api.selectMicrosoftLists(selection))
+      if (current !== request.current) return
+      if (!result) throw new Error('Unavailable bridge')
       if (result) onState(result)
       if (kind === 'select' && !result?.error) setDirty(false)
-    } catch { setError('微软连接操作未完成，请重试。') }
-    finally { if (kind !== 'cancel') setPending(false) }
+      if (kind === 'disconnect' && !result.error && !result.connected) { setDirty(false); onDisconnected?.() }
+    } catch { if (current === request.current) setError('微软连接操作未完成，请重试。') }
+    finally { if (current === request.current) setPending(null) }
   }
-  const busy = pending || state.refreshing || state.authorizing
+  const busy = Boolean(pending || state.refreshing || state.authorizing)
   const visibleError = error || state.error || (!state.configured ? '此版本暂时无法连接微软账号，请更新应用。' : selection.length > 20 ? '最多选择 20 个清单。' : '')
   return <section className="task-connection" aria-label="Microsoft To Do 导入">
     <div className="google-connection-heading"><ListTodo size={14} /><strong>Microsoft To Do</strong>{state.connected && <span><Check size={11} />{state.error ? '已授权 · 读取失败' : '已连接 · 只读'}</span>}</div>
@@ -56,6 +62,7 @@ export function MicrosoftTodoConnection({ state, onState }: { state: MicrosoftTo
         <div className="google-calendar-list" aria-label="选择微软待办清单">{state.lists.map(list => <label key={list.id}><input type="checkbox" disabled={busy} checked={selection.includes(list.id)} onChange={event => { setDirty(true); setSelection(current => event.target.checked ? [...current, list.id] : current.filter(id => id !== list.id)) }} /><span>{list.name}</span></label>)}</div>
         <div className="google-connection-actions"><button disabled={busy || !dirty || selection.length > 20} onClick={() => { void action('select') }}>同步所选清单</button><button disabled={busy} onClick={() => { void action('refresh') }}><RefreshCw size={11} />刷新</button></div>
       </>}
+    {state.connected && <div className="google-connection-actions"><button disabled={pending === 'disconnect'} onClick={() => { void action('disconnect') }}>{pending === 'disconnect' ? '正在断开…' : '断开连接'}</button></div>}
     {visibleError && <p className="google-connection-error" role="alert">{visibleError}</p>}
   </section>
 }

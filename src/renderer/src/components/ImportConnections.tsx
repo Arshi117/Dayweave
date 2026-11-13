@@ -7,6 +7,7 @@ import { identifyImportLink, importLinkInputError, type CalendarLinksState } fro
 import { GoogleConnection } from './GoogleConnection'
 import { MicrosoftTodoConnection } from './TaskConnections'
 import { CalendarFileImport } from './CalendarFileImport'
+import { SourceNameEditor } from './SourceNameEditor'
 
 interface Props {
   initialView?: string
@@ -105,6 +106,20 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
     finally { setPending(false) }
   }
   function navigate(next: string) { if (next !== 'file') setLinkedPdf(null); setView(next); setError(''); setInvalidAddress(false); setMessage(''); if (links.error) onLinks({ ...links, error: '' }) }
+  async function renameSource(name: string) {
+    const api = window.focusControls
+    if (!api || busy) return false
+    setPending(true); setError(''); setMessage('')
+    try {
+      const result = await api.renameCalendarSource(view, name)
+      if (!result || result.error) { setError(result?.error || '名称未保存，请重试。'); return false }
+      if (view === 'legacy' && result.subscription) onFeed(result.subscription)
+      else if (view === 'ticktick' && result.subscription) onTickTick(result.subscription)
+      else if (result.links) onLinks(result.links)
+      setMessage('名称已保存。'); return true
+    } catch { setError('名称未保存，请重试。'); return false }
+    finally { setPending(false) }
+  }
   const selected = view === 'legacy' ? feed : view === 'ticktick' ? ticktick : links.sources.find(source => source.id === view)?.snapshot
   const selectedFile = links.sources.find(source => source.id === view)?.kind === 'file'
   const row = rows.find(row => row.id === view)
@@ -129,14 +144,16 @@ export function ImportConnections({ initialView = 'home', google, feed, ticktick
       {view === 'manage' ? <div className="unified-source-list">
         <h3>来源管理</h3>
         {rows.length ? rows.map(source => <button key={source.id} onClick={() => navigate(source.id)}><span><strong>{source.name}</strong>{source.error ? <small>需要检查来源</small> : links.sources.find(item => item.id === source.id)?.kind === 'file' ? <small>本地文件</small> : null}</span><ChevronRight size={13} /></button>) : <p>添加链接或导入文件后，来源会出现在这里。</p>}
-      </div> : view === 'file' || view.startsWith('file:') ? <CalendarFileImport key={view} initialPdf={linkedPdf} replaceId={view.startsWith('file:') ? view.slice(5) : undefined} onState={onLinks} onDone={navigate} /> : view === 'google' ? <GoogleConnection state={google} onState={onGoogle} /> : view === 'microsoft' ? <MicrosoftTodoConnection state={microsoft} onState={onMicrosoft} /> : selected ? <div className="unified-source-detail">
+      </div> : view === 'file' || view.startsWith('file:') ? <CalendarFileImport key={view} initialPdf={linkedPdf} replaceId={view.startsWith('file:') ? view.slice(5) : undefined} onState={onLinks} onDone={navigate} /> : view === 'google' ? <GoogleConnection state={google} onState={onGoogle} onDisconnected={() => navigate('manage')} /> : view === 'microsoft' ? <MicrosoftTodoConnection state={microsoft} onState={onMicrosoft} onDisconnected={() => navigate('manage')} /> : selected ? <div className="unified-source-detail">
         <h3>{row?.name || '日历订阅'}</h3>
+        <SourceNameEditor key={view} name={row?.name || '日历订阅'} busy={busy} onSave={renameSource} />
         {selected.lastSynced && <p>{selectedFile ? '文件导入' : '最近更新'}：{new Date(selected.lastSynced).toLocaleString('zh-CN')}</p>}
         {selectedFile && <p>这是本地文件快照，不会自动同步。学校调课后，重新导出文件并替换此来源。</p>}
         {selected.error && <p className="google-connection-error" role="alert">{selected.error}</p>}
         {selected.importWarnings?.map(warning => <p key={warning} role="status">{warning}</p>)}
         <div className="google-connection-actions">{selectedFile ? <button disabled={busy} onClick={() => navigate('file:' + view)}><FileUp size={12} />替换文件</button> : <button disabled={busy || selected.refreshing} onClick={() => { void feedAction('refresh') }}><RefreshCw size={12} />{selected.refreshing ? '更新中' : '刷新'}</button>}<button disabled={busy || selected.refreshing} onClick={() => { void feedAction('remove') }}>移除来源</button></div>
       </div> : <p>该来源已移除。</p>}
+      {message && <p className="unified-import-success" role="status"><Check size={12} />{message}</p>}
     </>}
     {view !== 'home' && visibleError && <p className="google-connection-error" role="alert">{visibleError}</p>}
   </section>
