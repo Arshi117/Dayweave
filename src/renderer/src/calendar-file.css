@@ -7,9 +7,6 @@
 .calendar-file-picker input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .calendar-file-picker:focus-within { outline: 2px solid var(--dw-accent); outline-offset: 2px; }
 .calendar-file-preview ul { padding: 0; margin: 10px 0; list-style: none; }
-.source-name-editor { margin: 10px 0; }
-.source-name-editor label { display: block; color: var(--dw-muted); font-size: 11px; }
-.source-name-editor input { display: block; box-sizing: border-box; width: 100%; margin-top: 6px; padding: 8px; border: 1px solid var(--dw-line); border-radius: 7px; background: var(--dw-field); color: var(--dw-text); font: inherit; }
 .calendar-file-preview li { margin-bottom: 7px; padding: 8px; border: 1px solid var(--dw-line); border-radius: 7px; font-size: 10px; overflow-wrap: anywhere; }
 .calendar-file-preview li strong, .calendar-file-preview li span { display: block; margin-bottom: 4px; }
 .calendar-file-preview li span { color: var(--dw-muted); font-size: 9px; line-height: 1.5; }

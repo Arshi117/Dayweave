@@ -8,7 +8,6 @@ import { parseCalendarTasks } from './task-feed'
 import { CalendarImportError, calendarErrorMessage } from './calendar-errors'
 import type { CalendarRange, CalendarSource, SubscriptionSnapshot } from '../shared/focus'
 import type { CalendarFilePreview } from '../shared/calendar-files'
-import { SourceDisplayName } from './source-display-name'
 
 const empty = (): SubscriptionSnapshot => ({ configured: false, sourceLabel: '', events: [], tasks: [], lastSynced: null, refreshing: false, error: '', connectionType: 'file' })
 const sameRange = (a?: CalendarRange, b?: CalendarRange) => a?.from === b?.from && a?.to === b?.to
@@ -48,24 +47,16 @@ export class CalendarFileSource {
   private name = ''
   private range: CalendarRange | undefined
   private readonly file: string
-  private readonly displayName: SourceDisplayName
   constructor(directory: string, private changed: () => void, private id: string) {
     if (!/^link-[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid calendar storage identity.')
     this.file = join(directory, id + '.json')
-    this.displayName = new SourceDisplayName(this.file + '.name.json')
   }
-  state() { return this.displayName.apply(this.snapshot) }
-  async rename(value: unknown) {
-    try { await this.displayName.save(value) }
-    catch { return { snapshot: this.state(), error: '名称未保存，请填写 1～200 个字符，并检查本机存储后重试。' } }
-    this.changed(); return { snapshot: this.state(), error: '' }
-  }
+  state() { return this.snapshot }
   matches(_value: string) { return false }
   matchesText(value: string) { return Boolean(this.text) && value === this.text }
   start() { /* File imports are snapshots and never poll the network. */ }
   stop() {}
   async load() {
-    await this.displayName.load()
     try {
       const stored = JSON.parse(await readFile(this.file, 'utf8'))
       const text = safeStorage.decryptString(Buffer.from(stored.encrypted, 'base64'))
@@ -88,15 +79,15 @@ export class CalendarFileSource {
     this.snapshot = { ...snapshot, lastSynced: importedAt }; this.changed()
   }
   async refresh() {
-    if (!this.text) return this.state()
+    if (!this.text) return this.snapshot
     const text = this.text, name = this.name
     let snapshot: SubscriptionSnapshot
     do { snapshot = await projectCalendarFile(text, name, this.id, this.range) } while (this.text === text && !sameRange(snapshot.range, this.range))
-    if (this.text !== text) return this.state()
+    if (this.text !== text) return this.snapshot
     this.snapshot = { ...snapshot, lastSynced: this.snapshot.lastSynced }; this.changed()
-    return this.state()
+    return this.snapshot
   }
   async setRange(range: CalendarRange) { this.range = { ...range }; return this.refresh() }
   async readSource(): Promise<CalendarSource> { return { text: this.text, downloadedAt: this.snapshot.lastSynced || 0, error: this.text ? '' : '请重新导入此来源。' } }
-  async remove() { await writeFile(this.file, '{}', 'utf8'); await this.displayName.clear(); this.text = ''; this.snapshot = empty(); this.changed(); return this.state() }
+  async remove() { await writeFile(this.file, '{}', 'utf8'); this.text = ''; this.snapshot = empty(); this.changed(); return this.snapshot }
 }

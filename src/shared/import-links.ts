@@ -8,13 +8,6 @@ export interface ImportLink {
 export interface CalendarLinkSource { id: string; provider: 'ical' | 'ticktick'; kind?: 'feed' | 'file'; snapshot: SubscriptionSnapshot }
 export interface CalendarLinksState { sources: CalendarLinkSource[]; error: string }
 export interface CalendarLinkResult extends CalendarLinksState { addedId?: string; pdf?: { name: string; base64: string } }
-export interface SourceRenameResult { error: string; subscription?: SubscriptionSnapshot; links?: CalendarLinksState }
-
-export function normalizedSourceName(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const name = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
-  return name.length > 0 && name.length <= 200 ? name : null
-}
 
 // Validate only the address here. Whether a valid URL returns a supported
 // calendar/PDF is checked after reading it, not guessed from the hostname.

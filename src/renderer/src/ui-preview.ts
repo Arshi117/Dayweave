@@ -35,7 +35,6 @@ export function initializeUiPreview() {
   window.addEventListener('dayweave-preview-position', event => { const detail = (event as CustomEvent).detail; dockY = detail.y; previewDocked = detail.docked === true; placements.forEach(callback => callback(placement())) })
   window.addEventListener('resize', () => placements.forEach(callback => callback(placement())))
   window.focusControls = {
-    async renameCalendarSource() { return { error: unavailable } },
     hide() {}, resize(_height, calendar) { document.getElementById('root')!.style.width = dock ? '100%' : (calendar ? 1068 : 300) + 'px'; if (dock) window.dispatchEvent(new CustomEvent('dayweave-preview-calendar', {detail: calendar})) },
     beginDimensionResize() {}, moveDimensionResize() {}, endDimensionResize() {}, stepDimensionResize() {},
     onPlacement(callback) { placements.add(callback); queueMicrotask(() => { if (placements.has(callback)) callback(placement()) }); return () => { placements.delete(callback) } },

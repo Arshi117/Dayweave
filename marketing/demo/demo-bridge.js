@@ -51,7 +51,6 @@
   const rejectGoogle = async () => ({...google,error:denied});
   const rejectMicrosoft = async () => ({...microsoft,error:denied});
   window.focusControls = {
-    renameCalendarSource:async()=>({error:denied}),
     hide:()=>send('hide'),
     setMenuBarStatus:status=>send('menu-status',{status}),
     onOpenDetails:subscribe('details'),

@@ -40,7 +40,7 @@ export function combinedImports(google: GoogleCalendarState, legacy: Subscriptio
     refreshing: google.refreshing, error: google.error, range: google.range,
   } })
   if (legacy.configured && !(google.connected && /(^|\.)google\.com$/i.test(legacy.sourceLabel))) sources.push({ label: legacy.calendarName || '日历订阅', snapshot: legacy, provider: 'ical' })
-  if (ticktick.configured) sources.push({ label: ticktick.calendarName || 'TickTick', snapshot: ticktick, provider: 'ticktick' })
+  if (ticktick.configured) sources.push({ label: 'TickTick', snapshot: ticktick, provider: 'ticktick' })
   for (const link of links) if (link.snapshot.configured) sources.push({ label: link.snapshot.calendarName || (link.provider === 'ticktick' ? 'TickTick' : link.snapshot.sourceLabel), snapshot: link.snapshot, provider: link.provider })
   const events = new Map<string, FocusEvent>()
   for (const { label, snapshot, provider } of sources) for (const event of snapshot.events) {

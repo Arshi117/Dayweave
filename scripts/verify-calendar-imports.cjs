@@ -73,8 +73,6 @@ app.on('browser-window-created', (_, win) => {
       let state = await evaluate('window.focusControls.getCalendarLinks()')
       assert.equal(state.sources.length, 1); assert.equal(state.sources[0].kind, 'file')
       const original = state.sources[0].id
-      await click('重命名'); await setInput('.source-name-editor input', '我的课表'); await click('保存名称')
-      await wait('document.querySelector(".unified-source-detail h3")?.textContent === "我的课表"')
       await click('替换文件')
       await select('school.pdf', 'application/pdf', pdfFixture())
       await wait('Boolean(document.querySelector("canvas[width]")) && Boolean(document.querySelector(".pdf-timetable input[type=date]")) && !document.body.innerText.includes("正在打开 PDF")')
@@ -191,8 +189,7 @@ app.on('browser-window-created', (_, win) => {
         writeFileSync(join(directory, 'recognized-sample.png'), (await wc.capturePage()).toPNG())
         console.log('Actual sample: 3-page CJK timetable, 12 slots, 164 occurrences, 1 untimed course; no default teaching date or auto-save.')
       }
-      assert.equal((await evaluate('window.focusControls.getCalendarLinks()')).sources.find(source=>source.id===original).snapshot.calendarName, '我的课表')
-      console.log(JSON.stringify({ passed: true, directory, checks: ['ICS UI preview + commit', 'file source rename survives PDF replacement','PDF worker + rendered canvas', 'PDF semester preview + replacement', 'real safeStorage persistence', 'HTML link export guidance', 'extensionless calendar link subscribes with one fetch', 'extensionless PDF link opens preview without persistence', 'backup source count matches management list', 'busy-only source detail stays minimal'], sources: 2 }))
+      console.log(JSON.stringify({ passed: true, directory, checks: ['ICS UI preview + commit', 'PDF worker + rendered canvas', 'PDF semester preview + replacement', 'real safeStorage persistence', 'HTML link export guidance', 'extensionless calendar link subscribes with one fetch', 'extensionless PDF link opens preview without persistence', 'backup source count matches management list', 'busy-only source detail stays minimal'], sources: 2 }))
       clearTimeout(timeout); app.exit(0)
     } catch (error) { console.error(error); clearTimeout(timeout); app.exit(1) }
   })

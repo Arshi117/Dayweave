@@ -68,7 +68,6 @@ contextBridge.exposeInMainWorld('focusControls', {
   },
   getTickTick: () => ipcRenderer.invoke('focus:ticktick-state'),
   getCalendarLinks: () => ipcRenderer.invoke('focus:links-state'),
-  renameCalendarSource: (id: string, name: string) => ipcRenderer.invoke('focus:source-rename', id, name),
   previewCalendarFile: (name: string, text: string, replaceId?: string) => ipcRenderer.invoke('focus:file-preview', name, text, replaceId),
   commitCalendarFile: (token: string) => ipcRenderer.invoke('focus:file-commit', token),
   cancelCalendarFile: () => ipcRenderer.invoke('focus:file-cancel'),

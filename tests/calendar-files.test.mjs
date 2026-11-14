@@ -24,71 +24,11 @@ registerHooks({ load(url, context, next) {
   return next(specifier, context)
 } })
 const { CalendarLinks } = await import('../src/main/calendar-links.ts')
-const { CalendarSubscription } = await import('../src/main/calendar-subscription.ts')
 const { previewCalendarFile } = await import('../src/main/calendar-file.ts')
 const { downloadCalendarResource } = await import('../src/main/calendar-download.ts')
 const monday = '2026-09-07'
 const course = (patch = {}) => ({ id: 'math-1', title: '高等数学', weekday: 1, startTime: '08:05', endTime: '09:40', weeks: '1-16单', location: '教学楼 301', ...patch })
 const calendar = (title = '高等数学') => timetableCalendar('学期课表', monday, [course({ title })])
-
-test('source names survive refresh, restart and file replacement without changing event identities or original content', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'dayweave-source-names-'))
-  const links = new CalendarLinks(directory, () => {})
-  let restarted
-  globalThis.__dayweaveTestFetch = async () => new Response(calendar())
-  try {
-    const preview = await links.previewFile('课表.pdf.ics', calendar())
-    const imported = await links.commitFile(preview.token), id = imported.addedId
-    const originalEvent = imported.sources[0].snapshot.events[0]
-    assert.equal((await links.rename(id, '我的学校课表')).error, '')
-    assert.equal(links.state().sources[0].snapshot.calendarName, '我的学校课表')
-    assert.equal(links.state().sources[0].snapshot.events[0].calendarName, '我的学校课表')
-    assert.equal(links.state().sources[0].snapshot.events[0].id, originalEvent.id)
-    assert.equal(links.state().sources[0].snapshot.events[0].title, originalEvent.title)
-    assert.ok(!(await readFile(join(directory, id + '.json.name.json'), 'utf8')).includes('我的学校课表'))
-    assert.ok((await links.rename(id, '  ')).error)
-    assert.ok((await links.rename(id, '字'.repeat(201))).error)
-    assert.equal(links.state().sources[0].snapshot.calendarName, '我的学校课表')
-    const replacement = await links.previewFile('新文件.ics', calendar('调课后的数学'), id)
-    await links.commitFile(replacement.token)
-    assert.equal(links.state().sources[0].snapshot.calendarName, '我的学校课表')
-    assert.ok((await links.readSource(id)).text.includes('调课后的数学'))
-    const linked = await links.add('https://ticktick.com/calendar/fixture.ics'), feedId = linked.addedId
-    assert.equal((await links.rename(feedId, '工作待办')).error, '')
-    await links.refresh(feedId)
-    assert.equal(links.state().sources.find(source => source.id === feedId).snapshot.calendarName, '工作待办')
-    assert.equal(links.state().sources.find(source => source.id === id).snapshot.calendarName, '我的学校课表')
-    links.stop()
-    restarted = new CalendarLinks(directory, () => {}); await restarted.load()
-    assert.equal(restarted.state().sources.find(source => source.id === id).snapshot.calendarName, '我的学校课表')
-    assert.equal(restarted.state().sources.find(source => source.id === feedId).snapshot.calendarName, '工作待办')
-    await restarted.remove(id)
-    assert.ok((await restarted.rename(id, '已删除来源')).error)
-    assert.equal(await readFile(join(directory, id + '.json.name.json'), 'utf8'), '{}')
-  } finally { links.stop(); restarted?.stop(); delete globalThis.__dayweaveTestFetch; await rm(directory, { recursive: true, force: true }) }
-})
-
-test('legacy TickTick names survive an in-flight refresh and removal clears the local alias', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'dayweave-legacy-name-'))
-  const feed = new CalendarSubscription(directory, () => {}, 'ticktick')
-  globalThis.__dayweaveTestFetch = async () => new Response(calendar())
-  try {
-    await feed.refresh('https://ticktick.com/calendar/legacy.ics')
-    let release
-    globalThis.__dayweaveTestFetch = () => new Promise(resolve => { release = resolve })
-    const refreshing = feed.refresh()
-    for (let i = 0; i < 20 && !release; i++) await new Promise(resolve => setTimeout(resolve, 5))
-    assert.ok(release)
-    assert.equal((await feed.rename('私人安排')).error, '')
-    release(new Response(calendar('新日程'))); await refreshing
-    assert.equal(feed.state().calendarName, '私人安排')
-    assert.ok(feed.state().events.every(event => event.calendarName === '私人安排'))
-    await feed.remove()
-    globalThis.__dayweaveTestFetch = async () => new Response(calendar())
-    await feed.refresh('https://ticktick.com/calendar/legacy.ics')
-    assert.notEqual(feed.state().calendarName, '私人安排')
-  } finally { feed.stop(); delete globalThis.__dayweaveTestFetch; await rm(directory, { recursive: true, force: true }) }
-})
 
 test('Chinese teaching weeks handle ranges, odd/even weeks and explicit exceptions', () => {
   assert.deepEqual(teachingWeeks('1-6单,8,10-12双'), [1, 3, 5, 8, 10, 12])
