@@ -80,8 +80,8 @@ export function FocusBar() {
   const showDetails = expanded
   function resetDetails() { setExpanded(false); setSettings(false); setAppearanceOpen(false); setCalendar(false); setSyncOpen(false) }
   function collapse() { resetDetails(); if (placement.menuBar) window.focusControls?.hide() }
-  function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false) }
-  function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setAppearanceOpen(false); setSyncOpen(false) }
+  function openCalendar() { setExpanded(true); setCalendar(true); setSettings(false); setAppearanceOpen(false); setSyncOpen(false) }
+  function openConnections(id = 'home') { setConnectionTarget(id); setExpanded(true); setSettings(true); setCalendar(false); setAppearanceOpen(false); setSyncOpen(false) }
   useEffect(() => {
     function dismissOutside() {
       if (document.querySelector('dialog[open], [aria-modal="true"]')) return
@@ -226,9 +226,15 @@ export function FocusBar() {
   }
   function toggleSettings() {
     setExpanded(true)
+    setCalendar(false)
     setAppearanceOpen(false)
     setSyncOpen(false); setConnectionTarget('home')
     setSettings(current => !current)
+  }
+  function toggleAppearance() {
+    setExpanded(true)
+    setCalendar(false); setSettings(false); setSyncOpen(false)
+    setAppearanceOpen(current => !current)
   }
   function changeAppearance(next: Appearance) {
     if (persist(APPEARANCE_KEY, next)) setAppearance(next)
@@ -304,8 +310,8 @@ export function FocusBar() {
         <div className="focus-header-actions">
           <button className={syncProblem ? 'sync-status-trigger has-error' : 'sync-status-trigger'} aria-label="同步状态" aria-expanded={syncOpen} title={syncSummary(syncSources, now)} onClick={() => setSyncOpen(value => !value)}>{syncProblem ? <AlertCircle size={14} /> : <RefreshCw size={14} className={syncBusy ? 'is-spinning' : undefined} />}</button>
           <button title={calendar ? '收起日历' : '展开日历'} aria-label="展开日历" aria-pressed={calendar} onClick={() => { if (calendar) setCalendar(false); else openCalendar() }}><CalendarDays size={14} /></button>
-          <button title="切换外观" aria-label="切换外观" aria-pressed={appearanceOpen} onClick={() => { setSettings(false); setAppearanceOpen(current => !current) }}><Palette size={14} /></button>
-          {!settings && <button title="连接与导入" aria-label="连接与导入" onClick={toggleSettings}><Settings2 size={14} /></button>}
+          <button title="切换外观" aria-label="切换外观" aria-pressed={appearanceOpen} onClick={toggleAppearance}><Palette size={14} /></button>
+          <button title="连接与导入" aria-label="连接与导入" aria-pressed={settings} onClick={toggleSettings}><Settings2 size={14} /></button>
           <button title="收起面板" aria-label="收起面板" onClick={collapse}><X size={14} /></button>
         </div>
       </header>
